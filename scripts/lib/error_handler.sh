@@ -125,7 +125,7 @@ check_macos() {
 
 # Check macOS version
 check_macos_version() {
-    local min_version="${1:-12.0}"
+    local min_version="${1:-26.0}"
     local current_version
 
     current_version=$(sw_vers -productVersion)

@@ -40,9 +40,9 @@ preflight_checks() {
     # Check not running as root
     check_not_sudo || exit 1
 
-    # Check macOS version (minimum 12.0)
-    check_macos_version "12.0" || {
-        log_warn "This script is designed for macOS 12.0 or later"
+    # Check macOS version (minimum 26.0)
+    check_macos_version "26.0" || {
+        log_warn "This script is designed for macOS 26.0 or later"
         log_info "It may work on older versions but is not tested"
     }
 

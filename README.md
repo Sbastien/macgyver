@@ -7,7 +7,7 @@ Optimized for Apple Silicon with smart caching, beautiful logging, and robust er
 
 [![CI](https://github.com/Sbastien/macos-dev-setup/actions/workflows/ci.yml/badge.svg)](https://github.com/Sbastien/macos-dev-setup/actions/workflows/ci.yml)
 [![Lint](https://github.com/Sbastien/macos-dev-setup/actions/workflows/lint.yml/badge.svg)](https://github.com/Sbastien/macos-dev-setup/actions/workflows/lint.yml)
-[![macOS](https://img.shields.io/badge/macOS-12.0+-blue?logo=apple)](https://www.apple.com/macos)
+[![macOS](https://img.shields.io/badge/macOS-26.0+-blue?logo=apple)](https://www.apple.com/macos)
 [![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-Only-orange?logo=apple)](https://www.apple.com/mac/)
 [![Shell](https://img.shields.io/badge/Shell-POSIX-green?logo=gnu-bash)](https://pubs.opengroup.org/onlinepubs/9699919799/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
