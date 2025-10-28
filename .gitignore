@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Claude code
+.claude/
+
+# Cache
+.cache/
+*.cache
+
+# Local configuration
+.env
+.env.local
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Backup files
+*.backup
+*.bak
+
+# Test files
+test_output/
+tmp/
+
+# User-specific files
+.local/

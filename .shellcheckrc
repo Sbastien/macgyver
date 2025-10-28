@@ -1,0 +1,60 @@
+# ShellCheck configuration for POSIX sh compliance
+# https://github.com/koalaman/shellcheck/wiki
+
+# Specify shell dialect
+shell=sh
+
+# Disable specific warnings that are acceptable for this project
+
+# SC1090: Can't follow non-constant source
+# We dynamically source library files, this is by design
+disable=SC1090
+
+# SC1091: Not following sourced file
+# We source files from relative paths, shellcheck can't always resolve them
+disable=SC1091
+
+# SC2034: Variable appears unused
+# Some variables are used in sourced files or exported for child processes
+disable=SC2034
+
+# SC2086: Double quote to prevent globbing and word splitting
+# We intentionally use unquoted variables in some controlled contexts
+# disable=SC2086  # Commented out - we should fix these instead
+
+# SC2181: Check exit code directly with e.g. 'if mycmd;', not indirectly with $?
+# Sometimes checking $? is more readable for complex conditions
+disable=SC2181
+
+# SC3043: 'local' is undefined in POSIX sh
+# 'local' is widely supported across modern shells (bash, zsh, dash)
+# and is used throughout this project
+disable=SC3043
+
+# SC3040: 'set -o pipefail' is not POSIX
+# pipefail is commonly supported and useful for error handling
+disable=SC3040
+
+# SC2155: Declare and assign separately to avoid masking return values
+# Sometimes we intentionally combine declaration and assignment
+disable=SC2155
+
+# Enable optional checks
+
+# Suggest improvements for quoted variables
+enable=quote-safe-variables
+
+# Check for deprecated syntax
+enable=deprecate-which
+
+# Enable all optional checks (comment out ones you don't want)
+# enable=all
+
+# Severity levels:
+# error: Fail CI (default for important issues)
+# warning: Show but don't fail (default for style issues)
+# info: Informational only
+# style: Suggestions only
+
+# Set minimum severity to fail (error/warning/info/style)
+severity=warning

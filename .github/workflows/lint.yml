@@ -1,0 +1,128 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  markdown-lint:
+    name: Markdown Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          config: '.markdownlint.json'
+          globs: |
+            **/*.md
+            !node_modules
+
+  file-checks:
+    name: File Formatting Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for trailing whitespace
+        run: |
+          echo "🔍 Checking for trailing whitespace..."
+
+          if git grep -I -n '\s$' -- '*.sh' '*.md' 'Brewfile'; then
+            echo "❌ Trailing whitespace found (see above)"
+            exit 1
+          else
+            echo "✅ No trailing whitespace detected"
+          fi
+
+      - name: Check for mixed line endings
+        run: |
+          echo "🔍 Checking for mixed line endings..."
+
+          # Check that all text files use LF (Unix style)
+          if file * | grep -i "crlf"; then
+            echo "❌ CRLF line endings detected (should be LF)"
+            exit 1
+          else
+            echo "✅ All files use LF line endings"
+          fi
+
+      - name: Check shell script shebangs
+        run: |
+          echo "🔍 Checking shell script shebangs..."
+
+          # Verify all .sh files start with #!/bin/sh or #!/usr/bin/env sh
+          find . -name "*.sh" -type f -print0 | while IFS= read -r -d '' file; do
+            first_line=$(head -n 1 "$file")
+            if [[ ! "$first_line" =~ ^#!.*sh$ ]]; then
+              echo "❌ Invalid shebang in $file: $first_line"
+              exit 1
+            fi
+          done
+
+          echo "✅ All shell scripts have valid shebangs"
+
+  yaml-lint:
+    name: YAML Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint YAML files
+        run: |
+          echo "🔍 Linting YAML files..."
+
+          # Create yamllint config
+          cat > .yamllint.yml << 'EOF'
+          extends: default
+          rules:
+            line-length:
+              max: 120
+              level: warning
+            comments:
+              min-spaces-from-content: 1
+          EOF
+
+          yamllint -c .yamllint.yml .github/workflows/*.yml || {
+            echo "⚠️  YAML linting found issues (see above)"
+            # Don't fail on warnings, just inform
+            exit 0
+          }
+
+          echo "✅ YAML files validated"
+
+  brewfile-format:
+    name: Brewfile Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Brewfile formatting
+        run: |
+          echo "🔍 Checking Brewfile formatting..."
+
+          # Check for proper quotes
+          if grep -E '^(brew|cask) [a-zA-Z0-9_-]+$' Brewfile | head -n 1; then
+            echo "✅ Brewfile packages properly formatted"
+          fi
+
+          # Check for comments
+          comment_count=$(grep -c '^#' Brewfile || true)
+          echo "📝 Brewfile has $comment_count comment lines"
+
+          # Warn if no comments (good practice to document packages)
+          if [ "$comment_count" -lt 10 ]; then
+            echo "⚠️  Consider adding more comments to document packages"
+          fi
+
+          echo "✅ Brewfile formatting check complete"

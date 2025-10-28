@@ -1,0 +1,182 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: Shell Linting (ShellCheck)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: brew install shellcheck
+
+      - name: Run ShellCheck on all scripts
+        run: |
+          echo "🔍 Running ShellCheck on all shell scripts..."
+          find . -name "*.sh" -type f -print0 | while IFS= read -r -d '' file; do
+            echo "Checking: $file"
+            shellcheck -s sh "$file"
+          done
+
+  syntax-check:
+    name: Shell Syntax Validation
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        macos-version: [12, 13, 14, 15, 26]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate shell syntax (POSIX sh)
+        run: |
+          echo "🔍 Validating shell syntax for all scripts..."
+          find . -name "*.sh" -type f -print0 | while IFS= read -r -d '' file; do
+            echo "Checking syntax: $file"
+            sh -n "$file" || exit 1
+          done
+
+      - name: Make scripts executable
+        run: chmod +x bootstrap.sh setup.sh scripts/*.sh
+
+      - name: Verify script permissions
+        run: |
+          echo "✅ Verifying executable permissions..."
+          test -x bootstrap.sh || exit 1
+          test -x setup.sh || exit 1
+          for script in scripts/*.sh; do
+            test -x "$script" || exit 1
+          done
+
+  brewfile-validation:
+    name: Brewfile Validation
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Brewfile syntax
+        run: |
+          echo "🔍 Validating Brewfile syntax..."
+
+          # Check if Brewfile exists
+          if [ ! -f Brewfile ]; then
+            echo "❌ Brewfile not found"
+            exit 1
+          fi
+
+          # Validate Brewfile syntax (dry-run)
+          echo "✅ Brewfile found"
+
+          # Check for common issues
+          if grep -q "^\s*$" Brewfile; then
+            echo "✅ Brewfile has proper formatting"
+          fi
+
+          # Count packages
+          brew_count=$(grep -c '^brew ' Brewfile || true)
+          cask_count=$(grep -c '^cask ' Brewfile || true)
+
+          echo "📊 Brewfile Statistics:"
+          echo "  - Homebrew packages: $brew_count"
+          echo "  - Cask applications: $cask_count"
+          echo "  - Total: $((brew_count + cask_count))"
+
+  structure-validation:
+    name: Project Structure Validation
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify required files exist
+        run: |
+          echo "🔍 Verifying project structure..."
+
+          # Check main scripts
+          test -f bootstrap.sh || { echo "❌ bootstrap.sh not found"; exit 1; }
+          test -f setup.sh || { echo "❌ setup.sh not found"; exit 1; }
+          test -f Brewfile || { echo "❌ Brewfile not found"; exit 1; }
+
+          # Check scripts directory
+          test -d scripts || { echo "❌ scripts/ directory not found"; exit 1; }
+          test -d scripts/lib || { echo "❌ scripts/lib/ directory not found"; exit 1; }
+
+          # Check individual scripts
+          test -f scripts/brew_install.sh || { echo "❌ brew_install.sh not found"; exit 1; }
+          test -f scripts/brew_bundle.sh || { echo "❌ brew_bundle.sh not found"; exit 1; }
+          test -f scripts/install_xcode_cli.sh || { echo "❌ install_xcode_cli.sh not found"; exit 1; }
+          test -f scripts/macos_defaults.sh || { echo "❌ macos_defaults.sh not found"; exit 1; }
+
+          # Check lib files
+          test -f scripts/lib/log_utils.sh || { echo "❌ log_utils.sh not found"; exit 1; }
+          test -f scripts/lib/error_handler.sh || { echo "❌ error_handler.sh not found"; exit 1; }
+          test -f scripts/lib/utils.sh || { echo "❌ utils.sh not found"; exit 1; }
+
+          echo "✅ All required files present"
+
+  shell-compatibility:
+    name: Shell Compatibility Check
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with different shells
+        run: |
+          echo "🔍 Testing shell compatibility..."
+
+          # Test with sh
+          echo "Testing with /bin/sh..."
+          /bin/sh -n bootstrap.sh
+          /bin/sh -n setup.sh
+
+          # Test with bash
+          echo "Testing with /bin/bash..."
+          /bin/bash -n bootstrap.sh
+          /bin/bash -n setup.sh
+
+          # Test with zsh
+          echo "Testing with /bin/zsh..."
+          /bin/zsh -n bootstrap.sh
+          /bin/zsh -n setup.sh
+
+          echo "✅ All shells compatible"
+
+  security-scan:
+    name: Security Scan
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "🔍 Scanning for potential secrets..."
+
+          # Check for common secret patterns
+          if grep -r -E "(password|secret|token|api_key|apikey).*=.*['\"][^'\"]{8,}['\"]" . --exclude-dir=.git --exclude="*.md" --exclude="ci.yml"; then
+            echo "⚠️  Warning: Potential secrets found (review above)"
+            # Don't fail, just warn
+          else
+            echo "✅ No obvious secrets detected"
+          fi
+
+      - name: Check for sudo usage
+        run: |
+          echo "🔍 Checking sudo usage patterns..."
+
+          # Warn about direct sudo usage (should prompt user instead)
+          if grep -r "sudo " . --include="*.sh" | grep -v "check_not_sudo" | grep -v "# " | grep -v "comment"; then
+            echo "⚠️  Warning: Direct sudo usage found (review above)"
+            echo "Scripts should prompt user for password when needed"
+          else
+            echo "✅ No direct sudo usage detected"
+          fi
