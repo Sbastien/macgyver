@@ -14,13 +14,13 @@ if [ "${VERBOSE:-0}" = "1" ]; then
     LOG_LEVEL=$LOG_LEVEL_DEBUG
 fi
 
-# Color codes (ANSI)
-COLOR_RESET=$'\033[0m'
-COLOR_BLUE=$'\033[0;34m'
-COLOR_GREEN=$'\033[0;32m'
-COLOR_YELLOW=$'\033[0;33m'
-COLOR_RED=$'\033[0;31m'
-COLOR_GRAY=$'\033[0;90m'
+# Color codes (ANSI) - using printf for POSIX compatibility
+COLOR_RESET="$(printf '\033[0m')"
+COLOR_BLUE="$(printf '\033[0;34m')"
+COLOR_GREEN="$(printf '\033[0;32m')"
+COLOR_YELLOW="$(printf '\033[0;33m')"
+COLOR_RED="$(printf '\033[0;31m')"
+COLOR_GRAY="$(printf '\033[0;90m')"
 
 # Base log function
 log() {
