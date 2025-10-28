@@ -153,7 +153,7 @@ run_setup() {
     echo ""
 
     # Run setup script and capture exit code
-    if sh setup.sh; then
+    if sh setup.sh </dev/tty; then
         log_success "Setup completed successfully"
     else
         log_error "Setup script failed"

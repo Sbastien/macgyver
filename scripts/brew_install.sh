@@ -69,19 +69,11 @@ install_homebrew() {
         return 1
     fi
 
-    # Check if running in interactive mode
-    if [ ! -t 0 ]; then
-        log_error "This script must be run in an interactive terminal"
-        log_info "stdin is not connected to a TTY - password prompt will fail"
-        log_info "Please run this script directly: ./scripts/brew_install.sh"
-        return 1
-    fi
-
     # Download and run Homebrew installer
     log_info "Downloading Homebrew installer..."
     log_info "You may be prompted for your password..."
 
-    # Ensure the installer runs with a proper TTY
+    # Run installer with /dev/tty for interactive prompts
     if ! /bin/bash -c "$(curl -fsSL "$BREW_INSTALL_URL")" </dev/tty; then
         log_error "Homebrew installation failed"
         log_info "Please check the error messages above"
