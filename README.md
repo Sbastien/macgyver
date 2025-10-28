@@ -1,12 +1,12 @@
-# 🍎 macOS Dev Setup
+# 🔧 MacGyver
 
-> **Automated macOS development environment setup in one command**
+> **Your Mac setup problem solver**
 
-A production-ready script that transforms a fresh Mac into a fully configured development machine.
-Optimized for Apple Silicon with smart caching, beautiful logging, and robust error handling.
+One command transforms your fresh Mac into a fully-equipped dev machine. Like the legend himself,
+MacGyver solves complex setup problems with elegant shell scripts. No duct tape required.
 
-[![CI](https://github.com/Sbastien/macos-dev-setup/actions/workflows/ci.yml/badge.svg)](https://github.com/Sbastien/macos-dev-setup/actions/workflows/ci.yml)
-[![Lint](https://github.com/Sbastien/macos-dev-setup/actions/workflows/lint.yml/badge.svg)](https://github.com/Sbastien/macos-dev-setup/actions/workflows/lint.yml)
+[![CI](https://github.com/Sbastien/macgyver/actions/workflows/ci.yml/badge.svg)](https://github.com/Sbastien/macgyver/actions/workflows/ci.yml)
+[![Lint](https://github.com/Sbastien/macgyver/actions/workflows/lint.yml/badge.svg)](https://github.com/Sbastien/macgyver/actions/workflows/lint.yml)
 [![macOS](https://img.shields.io/badge/macOS-26.0+-blue?logo=apple)](https://www.apple.com/macos)
 [![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-Only-orange?logo=apple)](https://www.apple.com/mac/)
 [![Shell](https://img.shields.io/badge/Shell-POSIX-green?logo=gnu-bash)](https://pubs.opengroup.org/onlinepubs/9699919799/)
@@ -32,7 +32,7 @@ Optimized for Apple Silicon with smart caching, beautiful logging, and robust er
 ### One-Line Bootstrap
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sbastien/macos-dev-setup/main/bootstrap.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh
 ```
 
 That's it! The script will:
@@ -45,8 +45,8 @@ That's it! The script will:
 ### Manual Installation
 
 ```bash
-git clone https://github.com/Sbastien/macos-dev-setup.git
-cd macos-dev-setup
+git clone https://github.com/Sbastien/macgyver.git
+cd macgyver
 ./setup.sh
 ```
 
@@ -88,7 +88,7 @@ VERBOSE=1 ./setup.sh
 
 ```bash
 # Clear cache and reinstall all packages
-rm -rf ~/.cache/macos-dev-setup
+rm -rf ~/.cache/macgyver
 ./scripts/brew_bundle.sh ./Brewfile
 ```
 
@@ -137,7 +137,7 @@ The optional `macos_defaults.sh` script configures sensible defaults:
 ## 🏗️ Architecture
 
 ```text
-macos-dev-setup/
+macgyver/
 ├── bootstrap.sh          # Remote installer (curl | sh)
 ├── setup.sh              # Main orchestrator
 ├── Brewfile              # Package definitions

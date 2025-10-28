@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/lib/utils.sh"
 
 BREWFILE="${1:-}"
-CACHE_DIR="$HOME/.cache/macos-dev-setup"
+CACHE_DIR="$HOME/.cache/macgyver"
 BREWFILE_HASH_FILE="$CACHE_DIR/Brewfile.hash"
 BREWFILE_BACKUP="$CACHE_DIR/Brewfile.backup"
 

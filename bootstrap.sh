@@ -1,13 +1,13 @@
 #!/bin/sh
 
 # Bootstrap script - Downloads and runs the full setup
-# Usage: curl -fsSL https://raw.githubusercontent.com/Sbastien/macos-dev-setup/main/bootstrap.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh
 
 set -e
 
-ZIP_URL="https://github.com/Sbastien/macos-dev-setup/archive/main.zip"
-TEMP_DIR="/tmp/macos-dev-setup"
-EXTRACTED_DIR="/tmp/macos-dev-setup-main"
+ZIP_URL="https://github.com/Sbastien/macgyver/archive/main.zip"
+TEMP_DIR="/tmp/macgyver"
+EXTRACTED_DIR="/tmp/macgyver-main"
 
 # Minimal inline logging (to avoid circular dependencies in bootstrap)
 log_info() { printf "\033[0;34mℹ️  %s\033[0m\n" "$1"; }
