@@ -102,11 +102,11 @@ configure_xcode() {
     return 0
 }
 
-# Find the Xcode CLT package name
+# Find the Xcode CLT package name using multiple methods
 find_xcode_clt_package() {
     log_debug "Searching for Xcode Command Line Tools package..."
 
-    # Get list of available updates and find CLT
+    # Method 1: Try softwareupdate --list (may not always work)
     local package_name
     package_name=$(softwareupdate --list 2>&1 | \
                    grep -B 1 -E "Command Line Tools|Developer" | \
@@ -116,24 +116,56 @@ find_xcode_clt_package() {
                    tail -n1)
 
     if [ -n "$package_name" ]; then
-        log_debug "Found package: $package_name"
+        log_debug "Found package via softwareupdate --list: $package_name"
         echo "$package_name"
         return 0
-    else
-        log_debug "No Command Line Tools package found in software updates"
-        return 1
     fi
+
+    # Method 2: Try to find CLT in the software update catalog
+    log_debug "Method 1 failed, trying catalog search..."
+    package_name=$(softwareupdate --list 2>&1 | \
+                   grep "Command Line Tools" | \
+                   head -n1 | \
+                   sed 's/^[[:space:]]*\*[[:space:]]*//' | \
+                   sed 's/^Label:[[:space:]]*//')
+
+    if [ -n "$package_name" ]; then
+        log_debug "Found package via catalog: $package_name"
+        echo "$package_name"
+        return 0
+    fi
+
+    log_debug "No Command Line Tools package found in software updates"
+    return 1
 }
 
-# Install Xcode CLT silently using softwareupdate
+# Install Xcode CLT silently using softwareupdate with label detection
 install_xcode_cli_silent() {
     log_step "Installing Xcode Command Line Tools silently..."
 
+    # First, trigger the installation placeholder (creates the update entry)
+    log_debug "Creating installation placeholder..."
+    touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress 2>/dev/null || true
+
+    # Now find the package
     local package_name
     package_name=$(find_xcode_clt_package)
 
+    # Remove the placeholder
+    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress 2>/dev/null || true
+
     if [ -z "$package_name" ]; then
-        log_debug "No package found via softwareupdate, falling back to xcode-select"
+        log_debug "No package found via softwareupdate, trying direct label approach..."
+
+        # Try to install using a generic label pattern
+        # This works on most macOS versions
+        if sudo softwareupdate --install --all --agree-to-license 2>&1 | grep -q "Command Line Tools"; then
+            log_success "Silent installation initiated via --install --all"
+            configure_xcode
+            return 0
+        fi
+
+        log_debug "Direct installation failed, falling back to xcode-select"
         return 1
     fi
 
