@@ -5,12 +5,17 @@
 #   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh
 #   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --profile=minimal
 #   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --profile=URL
-#   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --branch=feature/my-branch
+#
+# Test a specific branch:
+#   BRANCH=feature/my-branch curl -fsSL https://raw.githubusercontent.com/.../bootstrap.sh | sh
+#
+# Combine branch and profile:
+#   BRANCH=develop curl -fsSL https://raw.githubusercontent.com/.../bootstrap.sh | sh -s -- --profile=minimal
 
 set -e
 
-# Default branch
-BRANCH="main"
+# Default branch (can be overridden with BRANCH environment variable)
+BRANCH="${BRANCH:-main}"
 TEMP_DIR="/tmp/macgyver"
 
 # Minimal inline logging (to avoid circular dependencies in bootstrap)
@@ -32,26 +37,6 @@ cleanup() {
         rm -rf "$TEMP_DIR.zip" "$EXTRACTED_DIR" 2>/dev/null || true
         log_success "Cleanup completed"
     fi
-}
-
-# Parse arguments for branch parameter
-parse_arguments() {
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --branch=*)
-                BRANCH="${1#*=}"
-                shift
-                ;;
-            --branch)
-                BRANCH="$2"
-                shift 2
-                ;;
-            *)
-                # Keep other arguments for setup.sh
-                shift
-                ;;
-        esac
-    done
 }
 
 # Setup error handling
@@ -204,9 +189,6 @@ run_setup() {
 
 # Main function
 main() {
-    # Parse arguments first to extract branch
-    parse_arguments "$@"
-
     log_section "macOS Development Environment Bootstrap"
 
     # Pre-flight checks
