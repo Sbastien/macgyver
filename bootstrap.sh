@@ -5,12 +5,13 @@
 #   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh
 #   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --profile=minimal
 #   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --profile=URL
+#   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --branch=feature/my-branch
 
 set -e
 
-ZIP_URL="https://github.com/Sbastien/macgyver/archive/main.zip"
+# Default branch
+BRANCH="main"
 TEMP_DIR="/tmp/macgyver"
-EXTRACTED_DIR="/tmp/macgyver-main"
 
 # Minimal inline logging (to avoid circular dependencies in bootstrap)
 log_info() { printf "\033[0;34mℹ️  %s\033[0m\n" "$1"; }
@@ -26,11 +27,31 @@ log_section() {
 # Cleanup function
 cleanup() {
     # Only log and clean if there are actually files to remove
-    if [ -e "$TEMP_DIR.zip" ] || [ -e "$EXTRACTED_DIR" ]; then
+    if [ -e "$TEMP_DIR.zip" ] || [ -n "$EXTRACTED_DIR" ] && [ -e "$EXTRACTED_DIR" ]; then
         log_step "Cleaning up temporary files..."
         rm -rf "$TEMP_DIR.zip" "$EXTRACTED_DIR" 2>/dev/null || true
         log_success "Cleanup completed"
     fi
+}
+
+# Parse arguments for branch parameter
+parse_arguments() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --branch=*)
+                BRANCH="${1#*=}"
+                shift
+                ;;
+            --branch)
+                BRANCH="$2"
+                shift 2
+                ;;
+            *)
+                # Keep other arguments for setup.sh
+                shift
+                ;;
+        esac
+    done
 }
 
 # Setup error handling
@@ -104,11 +125,13 @@ check_internet() {
 
 # Download setup files
 download_files() {
-    log_step "Downloading setup files from GitHub..."
+    log_step "Downloading setup files from GitHub (branch: $BRANCH)..."
 
-    if ! curl -fsSL --connect-timeout 10 --max-time 300 "$ZIP_URL" -o "$TEMP_DIR.zip"; then
+    local zip_url="https://github.com/Sbastien/macgyver/archive/${BRANCH}.zip"
+
+    if ! curl -fsSL --connect-timeout 10 --max-time 300 "$zip_url" -o "$TEMP_DIR.zip"; then
         log_error "Failed to download setup files"
-        log_info "Please check your internet connection and try again"
+        log_info "Please check your internet connection and branch name"
         exit 1
     fi
 
@@ -129,15 +152,23 @@ extract_files() {
 
 # Verify extracted directory
 verify_extraction() {
-    if [ ! -d "$EXTRACTED_DIR" ]; then
-        log_error "Extracted directory not found: $EXTRACTED_DIR"
+    # GitHub extracts to repo-branch format
+    local branch_slug
+    branch_slug=$(echo "$BRANCH" | tr '/' '-')
+    local extracted_dir="/tmp/macgyver-${branch_slug}"
+
+    if [ ! -d "$extracted_dir" ]; then
+        log_error "Extracted directory not found: $extracted_dir"
         exit 1
     fi
 
-    if [ ! -f "$EXTRACTED_DIR/setup.sh" ]; then
+    if [ ! -f "$extracted_dir/setup.sh" ]; then
         log_error "setup.sh not found in extracted directory"
         exit 1
     fi
+
+    # Update EXTRACTED_DIR to the actual location
+    EXTRACTED_DIR="$extracted_dir"
 
     log_success "Extraction verified"
 }
@@ -173,6 +204,9 @@ run_setup() {
 
 # Main function
 main() {
+    # Parse arguments first to extract branch
+    parse_arguments "$@"
+
     log_section "macOS Development Environment Bootstrap"
 
     # Pre-flight checks
