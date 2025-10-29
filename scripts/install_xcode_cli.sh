@@ -102,9 +102,97 @@ configure_xcode() {
     return 0
 }
 
-# Trigger Xcode CLT installation
-install_xcode_cli() {
-    log_step "Initiating Xcode Command Line Tools installation..."
+# Find the Xcode CLT package name using multiple methods
+find_xcode_clt_package() {
+    log_debug "Searching for Xcode Command Line Tools package..."
+
+    # Method 1: Try softwareupdate --list (may not always work)
+    local package_name
+    package_name=$(softwareupdate --list 2>&1 | \
+                   grep -B 1 -E "Command Line Tools|Developer" | \
+                   awk -F"[*:]" '/^ *\*/ {print $2}' | \
+                   sed 's/^ *//;s/ *$//' | \
+                   grep -i "command" | \
+                   tail -n1)
+
+    if [ -n "$package_name" ]; then
+        log_debug "Found package via softwareupdate --list: $package_name"
+        echo "$package_name"
+        return 0
+    fi
+
+    # Method 2: Try to find CLT in the software update catalog
+    log_debug "Method 1 failed, trying catalog search..."
+    package_name=$(softwareupdate --list 2>&1 | \
+                   grep "Command Line Tools" | \
+                   head -n1 | \
+                   sed 's/^[[:space:]]*\*[[:space:]]*//' | \
+                   sed 's/^Label:[[:space:]]*//')
+
+    if [ -n "$package_name" ]; then
+        log_debug "Found package via catalog: $package_name"
+        echo "$package_name"
+        return 0
+    fi
+
+    log_debug "No Command Line Tools package found in software updates"
+    return 1
+}
+
+# Install Xcode CLT silently using softwareupdate with label detection
+install_xcode_cli_silent() {
+    log_step "Installing Xcode Command Line Tools silently..."
+
+    # First, trigger the installation placeholder (creates the update entry)
+    log_debug "Creating installation placeholder..."
+    touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress 2>/dev/null || true
+
+    # Now find the package
+    local package_name
+    package_name=$(find_xcode_clt_package)
+
+    # Remove the placeholder
+    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress 2>/dev/null || true
+
+    if [ -z "$package_name" ]; then
+        log_debug "No package found via softwareupdate, trying direct label approach..."
+
+        # Try to install using a generic label pattern
+        # This works on most macOS versions
+        if sudo softwareupdate --install --all --agree-to-license 2>&1 | grep -q "Command Line Tools"; then
+            log_success "Silent installation initiated via --install --all"
+            configure_xcode
+            return 0
+        fi
+
+        log_debug "Direct installation failed, falling back to xcode-select"
+        return 1
+    fi
+
+    log_info "Installing: $package_name"
+    log_info "This may take several minutes..."
+
+    # Install the package silently
+    if sudo softwareupdate --install "$package_name" --verbose 2>&1 | while IFS= read -r line; do
+        log_debug "$line"
+    done; then
+        log_success "Silent installation completed"
+
+        # Configure after installation
+        if ! configure_xcode; then
+            return 1
+        fi
+
+        return 0
+    else
+        log_warn "Silent installation failed, falling back to interactive method"
+        return 1
+    fi
+}
+
+# Trigger Xcode CLT installation (with GUI fallback)
+install_xcode_cli_interactive() {
+    log_step "Initiating Xcode Command Line Tools installation (interactive)..."
 
     # Try to trigger installation
     if xcode-select --install >/dev/null 2>&1; then
@@ -135,6 +223,24 @@ install_xcode_cli() {
             return 1
         fi
     fi
+}
+
+# Main installation function with silent attempt first
+install_xcode_cli() {
+    # Try silent installation first
+    log_info "Attempting silent installation..."
+    if install_xcode_cli_silent; then
+        log_success "Xcode Command Line Tools installed silently"
+        return 0
+    fi
+
+    # Fall back to interactive installation
+    log_info "Falling back to interactive installation..."
+    if install_xcode_cli_interactive; then
+        return 0
+    fi
+
+    return 1
 }
 
 # Verify installation
