@@ -17,6 +17,7 @@ MacGyver solves complex setup problems with elegant shell scripts. No duct tape 
 ## ✨ Features
 
 - 🚀 **One-line installation** - From zero to ready in 30 minutes
+- 🎯 **Customizable profiles** - Use built-in profiles or bring your own Brewfile (local or remote)
 - 🍎 **Apple Silicon optimized** - Built for Apple Silicon Macs
 - 💾 **Smart caching** - SHA-256 hash detection, skip unchanged packages
 - 🎨 **Beautiful logging** - Color-coded output with 6 log levels
@@ -32,14 +33,21 @@ MacGyver solves complex setup problems with elegant shell scripts. No duct tape 
 ### One-Line Bootstrap
 
 ```bash
+# Full installation (default - 47+ tools)
 curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh
+
+# Minimal installation (git only)
+curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --profile=minimal
+
+# With your own Brewfile URL
+curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --profile=https://raw.githubusercontent.com/YOU/dotfiles/main/Brewfile
 ```
 
 That's it! The script will:
 
 1. ✅ Install Xcode Command Line Tools
 2. ✅ Install Homebrew (at /opt/homebrew for Apple Silicon)
-3. ✅ Install all packages from Brewfile
+3. ✅ Install packages from your chosen profile
 4. ✅ Optionally configure macOS system settings
 
 ### Manual Installation
@@ -50,13 +58,35 @@ cd macgyver
 ./setup.sh
 ```
 
+### 🎯 Customize Your Setup
+
+MacGyver supports **using your own Brewfile** - use ours as a starting point or bring your own!
+
+```bash
+# Full installation (recommended for new users)
+./setup.sh
+
+# Minimal (git only - build your own from scratch)
+./setup.sh --profile=minimal
+
+# Use your own Brewfile
+./setup.sh --profile=~/my-tools.brewfile
+
+# Use from your dotfiles repo (recommended!)
+./setup.sh --profile=https://raw.githubusercontent.com/YOU/dotfiles/main/Brewfile
+```
+
+**📚 Full customization guide:** [profiles/README.md](profiles/README.md)
+
+**Philosophy:** We provide the framework (Xcode, Homebrew, config). You bring your tools.
+
 ---
 
 ## 📦 What Gets Installed
 
 **47+ carefully selected packages** organized in 8 categories
 
-> 📋 **See the complete list**: [Brewfile](Brewfile) (self-documented with usage guide)
+> 📋 **See the complete list**: [profiles/default.brewfile](profiles/default.brewfile) (self-documented with usage guide)
 >
 > 💡 Includes modern CLI tools (bat, eza, ripgrep, fzf), development tools (Git, Docker, VS Code),
 > and productivity apps (Raycast, Rectangle, iTerm2)
@@ -64,6 +94,24 @@ cd macgyver
 ---
 
 ## 🎯 Usage Examples
+
+### Custom Brewfiles
+
+```bash
+# Use your own local Brewfile
+./setup.sh --profile=~/my-tools.brewfile
+
+# Use from your dotfiles repo
+./setup.sh --profile=https://raw.githubusercontent.com/username/dotfiles/main/Brewfile
+
+# Use from a Gist
+./setup.sh --profile=https://gist.githubusercontent.com/user/abc123/raw/my.brewfile
+
+# Combine multiple Brewfiles
+./setup.sh --profile=minimal
+./scripts/brew_bundle.sh ~/my-personal-tools.brewfile
+./scripts/brew_bundle.sh https://raw.githubusercontent.com/team/tools/main/Brewfile
+```
 
 ### Verbose Mode (for debugging)
 
@@ -89,7 +137,7 @@ VERBOSE=1 ./setup.sh
 ```bash
 # Clear cache and reinstall all packages
 rm -rf ~/.cache/macgyver
-./scripts/brew_bundle.sh ./Brewfile
+./scripts/brew_bundle.sh profiles/default.brewfile
 ```
 
 ---
@@ -139,8 +187,11 @@ The optional `macos_defaults.sh` script configures sensible defaults:
 ```text
 macgyver/
 ├── bootstrap.sh          # Remote installer (curl | sh)
-├── setup.sh              # Main orchestrator
-├── Brewfile              # Package definitions
+├── setup.sh              # Main orchestrator (supports --profile flag)
+├── profiles/
+│   ├── default.brewfile      # Full installation (47+ tools)
+│   ├── minimal.brewfile      # Minimal profile (git only)
+│   └── README.md             # Customization guide
 ├── scripts/
 │   ├── lib/
 │   │   ├── log_utils.sh      # Logging system
@@ -199,7 +250,27 @@ LOG_LEVEL=0 ./setup.sh
 
 ### Customizing Packages
 
-The [Brewfile](Brewfile) is self-documented with:
+**Option 1: Use your own Brewfile** (recommended)
+
+```bash
+# Create your own from scratch
+touch ~/my-setup.brewfile
+echo 'brew "git"' >> ~/my-setup.brewfile
+echo 'brew "neovim"' >> ~/my-setup.brewfile
+./setup.sh --profile=~/my-setup.brewfile
+
+# Or start from the default
+cp profiles/default.brewfile ~/my-setup.brewfile
+vim ~/my-setup.brewfile  # Comment out what you don't need
+./setup.sh --profile=~/my-setup.brewfile
+
+# Or use from your dotfiles repo
+./setup.sh --profile=https://raw.githubusercontent.com/YOU/dotfiles/main/Brewfile
+```
+
+**Option 2: Edit the default Brewfile**
+
+The [profiles/default.brewfile](profiles/default.brewfile) is self-documented with:
 
 - Legend explaining symbols (⭐ 🔧 💎 📦)
 - Description of each package
@@ -209,8 +280,10 @@ The [Brewfile](Brewfile) is self-documented with:
 Edit it to match your workflow, then run:
 
 ```bash
-./scripts/brew_bundle.sh ./Brewfile
+./scripts/brew_bundle.sh profiles/default.brewfile
 ```
+
+**📚 Full customization guide:** [profiles/README.md](profiles/README.md)
 
 ---
 

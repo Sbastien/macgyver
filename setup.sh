@@ -10,10 +10,79 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/scripts/lib/error_handler.sh"
 . "$SCRIPT_DIR/scripts/lib/utils.sh"
 
-BREWFILE="$SCRIPT_DIR/Brewfile"
+# Default Brewfile
+BREWFILE="$SCRIPT_DIR/profiles/default.brewfile"
+PROFILE=""
 
 # Total setup start time
 SETUP_START_TIME=$(date +%s)
+
+# Parse command line arguments
+parse_args() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --profile=*)
+                PROFILE="${1#*=}"
+                ;;
+            --profile)
+                shift
+                PROFILE="$1"
+                ;;
+            --help|-h)
+                show_usage
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+# Show usage information
+show_usage() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Options:
+  --profile=PATH    Use a custom Brewfile (path or URL)
+  -h, --help        Show this help message
+
+Built-in Profiles:
+  default           Full installation - 47+ tools (default if no --profile specified)
+  minimal           Git only - build your own from scratch
+
+Examples:
+  # Full installation (default)
+  $0
+
+  # Minimal (git only)
+  $0 --profile=minimal
+
+  # Your own local Brewfile
+  $0 --profile=~/my-tools.brewfile
+  $0 --profile=/path/to/custom.brewfile
+
+  # From your dotfiles repo (recommended!)
+  $0 --profile=https://raw.githubusercontent.com/YOU/dotfiles/main/Brewfile
+
+  # From a GitHub Gist
+  $0 --profile=https://gist.githubusercontent.com/user/abc123/raw/my.brewfile
+
+Combining Multiple Brewfiles:
+  # Start minimal, add your tools gradually
+  $0 --profile=minimal
+  ./scripts/brew_bundle.sh ~/my-personal-tools.brewfile
+  ./scripts/brew_bundle.sh https://raw.githubusercontent.com/team/tools/main/Brewfile
+
+Learn More:
+  See profiles/README.md for full customization guide
+
+EOF
+}
 
 # Display welcome message
 show_welcome() {
@@ -25,6 +94,94 @@ show_welcome() {
     log_info "  3. Packages from Brewfile"
     log_info "  4. macOS system configurations (optional)"
     echo ""
+}
+
+# Download remote Brewfile from URL
+download_remote_brewfile() {
+    local url="$1"
+    local temp_file="$HOME/.cache/macgyver/remote-brewfile-$(date +%s).brewfile"
+
+    ensure_dir "$(dirname "$temp_file")" || return 1
+
+    log_info "Downloading remote Brewfile from: $url" >&2
+
+    if curl -fsSL "$url" -o "$temp_file"; then
+        # Verify it's a valid Brewfile (basic check)
+        if grep -qE "^(brew|cask|tap|mas)" "$temp_file"; then
+            log_success "Remote Brewfile downloaded successfully" >&2
+            echo "$temp_file"
+            return 0
+        else
+            log_error "Downloaded file doesn't appear to be a valid Brewfile" >&2
+            rm -f "$temp_file"
+            return 1
+        fi
+    else
+        log_error "Failed to download remote Brewfile" >&2
+        rm -f "$temp_file"
+        return 1
+    fi
+}
+
+# Resolve profile to Brewfile path
+resolve_profile() {
+    if [ -z "$PROFILE" ]; then
+        # No profile specified, use default
+        log_debug "Using default Brewfile: $BREWFILE"
+        return 0
+    fi
+
+    # Check if PROFILE is a URL (http:// or https://)
+    case "$PROFILE" in
+        http://*|https://*)
+            local downloaded_file
+            downloaded_file=$(download_remote_brewfile "$PROFILE")
+            if [ $? -eq 0 ] && [ -f "$downloaded_file" ]; then
+                BREWFILE="$downloaded_file"
+                log_info "Using remote Brewfile: $PROFILE"
+                return 0
+            else
+                log_error "Failed to download remote Brewfile from: $PROFILE"
+                exit 1
+            fi
+            ;;
+    esac
+
+    # Check if PROFILE is a file path
+    if [ -f "$PROFILE" ]; then
+        BREWFILE="$PROFILE"
+        log_info "Using custom Brewfile: $BREWFILE"
+        return 0
+    fi
+
+    # Check if PROFILE is a relative path from SCRIPT_DIR
+    if [ -f "$SCRIPT_DIR/$PROFILE" ]; then
+        BREWFILE="$SCRIPT_DIR/$PROFILE"
+        log_info "Using Brewfile: $BREWFILE"
+        return 0
+    fi
+
+    # Check if it's a named profile
+    case "$PROFILE" in
+        minimal|default)
+            BREWFILE="$SCRIPT_DIR/profiles/$PROFILE.brewfile"
+            ;;
+        *)
+            # Try as filename in profiles/
+            if [ -f "$SCRIPT_DIR/profiles/$PROFILE" ]; then
+                BREWFILE="$SCRIPT_DIR/profiles/$PROFILE"
+            elif [ -f "$SCRIPT_DIR/profiles/$PROFILE.brewfile" ]; then
+                BREWFILE="$SCRIPT_DIR/profiles/$PROFILE.brewfile"
+            else
+                log_error "Profile not found: $PROFILE"
+                log_info "Available built-in profiles: minimal, default"
+                log_info "Or provide a path/URL to a custom Brewfile"
+                exit 1
+            fi
+            ;;
+    esac
+
+    log_info "Using profile '$PROFILE': $BREWFILE"
 }
 
 # Run pre-flight checks
@@ -48,6 +205,9 @@ preflight_checks() {
 
     # Check internet connectivity
     check_internet || exit 1
+
+    # Resolve profile to Brewfile
+    resolve_profile
 
     # Check if Brewfile exists
     if [ ! -f "$BREWFILE" ]; then
@@ -173,6 +333,9 @@ show_summary() {
 
 # Main function
 main() {
+    # Parse command line arguments
+    parse_args "$@"
+
     # Setup error handling
     setup_error_handling
 
