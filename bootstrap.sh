@@ -1,7 +1,10 @@
 #!/bin/sh
 
 # Bootstrap script - Downloads and runs the full setup
-# Usage: curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --profile=minimal
+#   curl -fsSL https://raw.githubusercontent.com/Sbastien/macgyver/main/bootstrap.sh | sh -s -- --profile=URL
 
 set -e
 
@@ -149,11 +152,17 @@ run_setup() {
     }
 
     log_info "Executing setup.sh..."
+
+    # Show profile info if specified
+    if [ $# -gt 0 ]; then
+        log_info "Arguments: $*"
+    fi
+
     log_info "Output from setup.sh follows:"
     echo ""
 
-    # Run setup script and capture exit code
-    if sh setup.sh </dev/tty; then
+    # Run setup script with all arguments passed to bootstrap
+    if sh setup.sh "$@" </dev/tty; then
         log_success "Setup completed successfully"
     else
         log_error "Setup script failed"
@@ -177,8 +186,8 @@ main() {
     extract_files
     verify_extraction
 
-    # Run setup
-    run_setup
+    # Run setup (pass all arguments to setup.sh)
+    run_setup "$@"
 
     log_section "Bootstrap Completed Successfully"
     log_success "Your macOS development environment is ready!"

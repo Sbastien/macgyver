@@ -1,3 +1,4 @@
+---
 name: Lint
 
 on:
@@ -33,7 +34,7 @@ jobs:
         run: |
           echo "🔍 Checking for trailing whitespace..."
 
-          if git grep -I -n '\s$' -- '*.sh' '*.md' 'Brewfile'; then
+          if git grep -I -n '\s$' -- '*.sh' '*.md' 'profiles/*.brewfile'; then
             echo "❌ Trailing whitespace found (see above)"
             exit 1
           else
@@ -90,6 +91,8 @@ jobs:
               level: warning
             comments:
               min-spaces-from-content: 1
+            truthy:
+              allowed-values: ['true', 'false', 'on']
           EOF
 
           yamllint -c .yamllint.yml .github/workflows/*.yml || {
@@ -111,18 +114,22 @@ jobs:
         run: |
           echo "🔍 Checking Brewfile formatting..."
 
-          # Check for proper quotes
-          if grep -E '^(brew|cask) [a-zA-Z0-9_-]+$' Brewfile | head -n 1; then
-            echo "✅ Brewfile packages properly formatted"
-          fi
+          for brewfile in profiles/*.brewfile; do
+            echo "Checking: $brewfile"
 
-          # Check for comments
-          comment_count=$(grep -c '^#' Brewfile || true)
-          echo "📝 Brewfile has $comment_count comment lines"
+            # Check for proper quotes
+            if grep -E '^(brew|cask) [a-zA-Z0-9_-]+$' "$brewfile" | head -n 1; then
+              echo "✅ $brewfile packages properly formatted"
+            fi
 
-          # Warn if no comments (good practice to document packages)
-          if [ "$comment_count" -lt 10 ]; then
-            echo "⚠️  Consider adding more comments to document packages"
-          fi
+            # Check for comments
+            comment_count=$(grep -c '^#' "$brewfile" || true)
+            echo "📝 $brewfile has $comment_count comment lines"
+
+            # Warn if no comments (good practice to document packages)
+            if [ "$comment_count" -lt 5 ]; then
+              echo "⚠️  Consider adding more comments to $brewfile"
+            fi
+          done
 
           echo "✅ Brewfile formatting check complete"

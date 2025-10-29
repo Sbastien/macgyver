@@ -1,3 +1,4 @@
+---
 name: CI
 
 on:
@@ -64,30 +65,33 @@ jobs:
 
       - name: Validate Brewfile syntax
         run: |
-          echo "🔍 Validating Brewfile syntax..."
+          echo "🔍 Validating Brewfiles..."
 
-          # Check if Brewfile exists
-          if [ ! -f Brewfile ]; then
-            echo "❌ Brewfile not found"
+          # Check profiles directory
+          if [ ! -d profiles ]; then
+            echo "❌ profiles/ directory not found"
             exit 1
           fi
 
-          # Validate Brewfile syntax (dry-run)
-          echo "✅ Brewfile found"
+          # Validate each Brewfile
+          for brewfile in profiles/*.brewfile; do
+            if [ ! -f "$brewfile" ]; then
+              echo "❌ No Brewfiles found in profiles/"
+              exit 1
+            fi
 
-          # Check for common issues
-          if grep -q "^\s*$" Brewfile; then
-            echo "✅ Brewfile has proper formatting"
-          fi
+            echo "✅ Validating: $brewfile"
 
-          # Count packages
-          brew_count=$(grep -c '^brew ' Brewfile || true)
-          cask_count=$(grep -c '^cask ' Brewfile || true)
+            # Count packages
+            brew_count=$(grep -c '^brew ' "$brewfile" || true)
+            cask_count=$(grep -c '^cask ' "$brewfile" || true)
 
-          echo "📊 Brewfile Statistics:"
-          echo "  - Homebrew packages: $brew_count"
-          echo "  - Cask applications: $cask_count"
-          echo "  - Total: $((brew_count + cask_count))"
+            echo "📊 Statistics for $brewfile:"
+            echo "  - Homebrew packages: $brew_count"
+            echo "  - Cask applications: $cask_count"
+            echo "  - Total: $((brew_count + cask_count))"
+            echo ""
+          done
 
   structure-validation:
     name: Project Structure Validation
@@ -103,7 +107,12 @@ jobs:
           # Check main scripts
           test -f bootstrap.sh || { echo "❌ bootstrap.sh not found"; exit 1; }
           test -f setup.sh || { echo "❌ setup.sh not found"; exit 1; }
-          test -f Brewfile || { echo "❌ Brewfile not found"; exit 1; }
+
+          # Check profiles directory and Brewfiles
+          test -d profiles || { echo "❌ profiles/ directory not found"; exit 1; }
+          test -f profiles/default.brewfile || { echo "❌ profiles/default.brewfile not found"; exit 1; }
+          test -f profiles/minimal.brewfile || { echo "❌ profiles/minimal.brewfile not found"; exit 1; }
+          test -f profiles/README.md || { echo "❌ profiles/README.md not found"; exit 1; }
 
           # Check scripts directory
           test -d scripts || { echo "❌ scripts/ directory not found"; exit 1; }
@@ -162,7 +171,8 @@ jobs:
           echo "🔍 Scanning for potential secrets..."
 
           # Check for common secret patterns
-          if grep -r -E "(password|secret|token|api_key|apikey).*=.*['\"][^'\"]{8,}['\"]" . --exclude-dir=.git --exclude="*.md" --exclude="ci.yml"; then
+          if grep -r -E "(password|secret|token|api_key|apikey).*=.*['\"][^'\"]{8,}['\"]" . \
+            --exclude-dir=.git --exclude="*.md" --exclude="ci.yml"; then
             echo "⚠️  Warning: Potential secrets found (review above)"
             # Don't fail, just warn
           else
