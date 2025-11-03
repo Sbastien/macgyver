@@ -60,7 +60,7 @@ brew "duf"                    # 💎 Modern df - prettier disk free utility
 brew "procs"                  # 💎 Modern ps - better process viewer
 brew "jq"                     # ⭐🔧 JSON processor - essential for JSON manipulation
 brew "yq"                     # 📦 jq for YAML files
-brew "tldr"                   # 📦 Simplified man pages - quick command examples
+brew "tlrc"                   # 📦 Simplified man pages - quick command examples
 brew "coreutils"              # 🔧 GNU core utilities (gls, gcat, etc.)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
