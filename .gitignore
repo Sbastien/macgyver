@@ -1,0 +1,6 @@
+# No build, no vendored dependencies, no generated artifacts — so this covers
+# only what actually turns up in the working tree. An ignore rule for a file
+# that cannot occur is a claim about the project that is not true.
+
+.DS_Store
+.claude/
