@@ -71,6 +71,7 @@ brew "direnv"               # Per-directory env vars
 brew "watchman"             # File watcher
 brew "shellcheck"           # Shell script linter
 brew "shfmt"                # Shell script formatter
+brew "biome"                # Fast JS/TS linter & formatter
 brew "gum"                  # Elegant shell scripts
 brew "mas"                  # Mac App Store CLI
 brew "pre-commit"           # Git hooks manager
