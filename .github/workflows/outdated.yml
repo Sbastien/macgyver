@@ -1,4 +1,4 @@
-name: Check Outdated Packages
+name: Check Deprecated Packages
 
 on:
   schedule:
@@ -6,48 +6,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-outdated:
+  check-deprecated:
     runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install packages from Brewfile
-        run: |
-          brew bundle --file=Brewfile --no-lock
-        continue-on-error: true
-
-      - name: Check for outdated packages
-        id: outdated
-        run: |
-          echo "Checking for outdated packages..."
-          outdated=$(brew outdated --verbose 2>/dev/null || true)
-          
-          if [ -n "$outdated" ]; then
-            echo "outdated_found=true" >> $GITHUB_OUTPUT
-            echo "### Outdated Packages" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "$outdated" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          else
-            echo "outdated_found=false" >> $GITHUB_OUTPUT
-            echo "### All packages are up to date!" >> $GITHUB_STEP_SUMMARY
-          fi
-
       - name: Check for deprecated packages
         run: |
-          echo "Checking for deprecated packages..."
-          echo "### Deprecated Check" >> $GITHUB_STEP_SUMMARY
-          
+          echo "### Deprecated Package Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          found_deprecated=false
+
+          # Extract package names from Brewfile
           while IFS= read -r line; do
-            pkg=$(echo "$line" | grep -oE '^(brew|cask)\s+"[^"]+"' | grep -oE '"[^"]+"' | tr -d '"')
-            if [ -n "$pkg" ]; then
+            # Match brew "package" or cask "package"
+            if [[ "$line" =~ ^(brew|cask)[[:space:]]+\"([^\"]+)\" ]]; then
+              pkg="${BASH_REMATCH[2]}"
+
+              # Check if deprecated or disabled
               info=$(brew info "$pkg" 2>/dev/null || true)
               if echo "$info" | grep -qi "deprecated\|disabled"; then
                 echo "::warning::Package $pkg may be deprecated"
-                echo "- ⚠️ $pkg may be deprecated" >> $GITHUB_STEP_SUMMARY
+                echo "- ⚠️ \`$pkg\` may be deprecated" >> $GITHUB_STEP_SUMMARY
+                found_deprecated=true
               fi
             fi
           done < Brewfile
-          
-          echo "Deprecation check complete" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$found_deprecated" = false ]; then
+            echo "✅ No deprecated packages found" >> $GITHUB_STEP_SUMMARY
+          fi
