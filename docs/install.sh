@@ -15,8 +15,7 @@ readonly GITHUB_USER="Sbastien"
 readonly REPO_URL="https://raw.githubusercontent.com/${GITHUB_USER}/Brewfile/main/Brewfile"
 readonly BREWFILE_PATH="$HOME/.Brewfile"
 
-readonly GUM_VERSION="0.14.5"
-readonly GUM_SHA256="0bd8e6c180084654728f43c0a9ae0afd7ba6401a5fbcac99cbb2edfbead279ae"
+readonly GUM_VERSION="0.17.0"
 readonly GUM_URL="https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}/gum_${GUM_VERSION}_Darwin_arm64.tar.gz"
 
 readonly COLOR_BREW="#FBB040"
@@ -89,20 +88,21 @@ setup_homebrew() {
 setup_gum() {
     command -v gum &>/dev/null && return 0
 
+    # Use brew if already available
+    if command -v brew &>/dev/null || [[ -f /opt/homebrew/bin/brew ]]; then
+        [[ -f /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+        brew install gum -q &
+        spin $! "Installing gum via Homebrew..."
+        return 0
+    fi
+
+    # Otherwise download temporarily
     GUM_TMP_DIR=$(mktemp -d)
     local archive="$GUM_TMP_DIR/gum.tar.gz"
 
-    # Download
     curl -fsSL "$GUM_URL" -o "$archive" &
     spin $! "Downloading gum..." 1
 
-    # Verify checksum
-    shasum -a 256 "$archive" | grep -q "$GUM_SHA256" &
-    local checksum_pid=$!
-    spin $checksum_pid "Verifying checksum..." 1
-    wait "$checksum_pid" || die "Checksum verification failed!"
-
-    # Extract and add to PATH
     tar -xzf "$archive" -C "$GUM_TMP_DIR" --strip-components=1
     export PATH="$GUM_TMP_DIR:$PATH"
 }
