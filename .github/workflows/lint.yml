@@ -20,8 +20,10 @@ jobs:
           scandir: ./docs
           severity: warning
 
+      - name: Install shfmt
+        run: |
+          curl -sS https://webi.sh/shfmt | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: shfmt
-        uses: mvdan/sh@v0.14.0
-        with:
-          sh-checker: true
-          sh-checker-args: -i 4 -ci -d ./docs/*.sh
+        run: shfmt -i 4 -ci -d ./docs/*.sh
