@@ -104,7 +104,6 @@ cask "bruno"                # API client
 cask "zen"                  # Privacy browser
 cask "tableplus"            # Database GUI
 cask "claude"               # Claude AI desktop app
-cask "claude-code"          # Claude AI CLI
 
 # Utility Apps
 # @icon:puzzle
