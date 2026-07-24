@@ -13,6 +13,9 @@
 set -euo pipefail
 
 readonly OUTPUT="Brewfile"
+readonly README="README.md"
+readonly STATS_START="<!-- stats:start -->"
+readonly STATS_END="<!-- stats:end -->"
 
 # Profiles concatenated into the root Brewfile, in order. Only `base` is
 # included: the public one-line install should give a sane baseline, not one
@@ -39,23 +42,79 @@ render() {
     done
 }
 
+# The badge line in the README used to be hand-written and drifted to
+# "50+ CLI tools · 15+ apps" while the file held 62 and 20. It is derived now.
+stats_line() {
+    local formulae casks fonts
+    formulae=$(brew bundle list --formula --file="$OUTPUT" 2>/dev/null | wc -l | tr -d ' ')
+    casks=$(brew bundle list --cask --file="$OUTPUT" 2>/dev/null | wc -l | tr -d ' ')
+    fonts=$(brew bundle list --cask --file="$OUTPUT" 2>/dev/null | grep -c '^font-' || true)
+
+    printf '  <strong>%s CLI tools · %s apps · %s Nerd Fonts</strong>' \
+        "$formulae" "$((casks - fonts))" "$fonts"
+}
+
+# What the README currently claims, between the markers
+readme_stats() {
+    awk -v s="$STATS_START" -v e="$STATS_END" '
+        index($0, e) { inside = 0 }
+        inside       { print }
+        index($0, s) { inside = 1 }
+    ' "$README"
+}
+
+update_readme() {
+    grep -q "$STATS_START" "$README" 2>/dev/null || return 0
+
+    local line tmp
+    line=$(stats_line)
+    tmp=$(mktemp)
+
+    awk -v s="$STATS_START" -v e="$STATS_END" -v repl="$line" '
+        index($0, s) { print; print repl; skip = 1; next }
+        index($0, e) { skip = 0 }
+        !skip        { print }
+    ' "$README" >"$tmp"
+
+    mv "$tmp" "$README"
+}
+
 if [[ "${1:-}" == "--check" ]]; then
     if [[ ! -f "$OUTPUT" ]]; then
         printf '  \033[31m✗\033[0m %s is missing. Run: mise run generate\n' "$OUTPUT" >&2
         exit 1
     fi
 
-    if diff -q <(render) "$OUTPUT" >/dev/null 2>&1; then
-        printf '  \033[32m✓\033[0m %s is up to date\n' "$OUTPUT"
-        exit 0
+    if ! diff -q <(render) "$OUTPUT" >/dev/null 2>&1; then
+        message="$OUTPUT is out of date with profiles/. Run: mise run generate"
+        [[ -n "${GITHUB_ACTIONS:-}" ]] && printf '::error::%s\n' "$message"
+        printf '  \033[31m✗\033[0m %s\n\n' "$message" >&2
+        diff -u "$OUTPUT" <(render) | sed 's/^/    /' >&2
+        exit 1
     fi
 
-    message="$OUTPUT is out of date with profiles/. Run: mise run generate"
-    [[ -n "${GITHUB_ACTIONS:-}" ]] && printf '::error::%s\n' "$message"
-    printf '  \033[31m✗\033[0m %s\n\n' "$message" >&2
-    diff -u "$OUTPUT" <(render) | sed 's/^/    /' >&2
-    exit 1
+    # Only checkable where brew can count the packages
+    if command -v brew &>/dev/null && grep -q "$STATS_START" "$README" 2>/dev/null; then
+        if [[ "$(readme_stats)" != "$(stats_line)" ]]; then
+            message="$README package counts are stale. Run: mise run generate"
+            [[ -n "${GITHUB_ACTIONS:-}" ]] && printf '::error::%s\n' "$message"
+            printf '  \033[31m✗\033[0m %s\n' "$message" >&2
+            printf '      have: %s\n' "$(readme_stats)" >&2
+            printf '      want: %s\n' "$(stats_line)" >&2
+            exit 1
+        fi
+    fi
+
+    printf '  \033[32m✓\033[0m %s and %s are up to date\n' "$OUTPUT" "$README"
+    exit 0
 fi
 
 render >"$OUTPUT"
 printf '  \033[32m✓\033[0m wrote %s from %s\n' "$OUTPUT" "${ROOT_PROFILES[*]}"
+
+if command -v brew &>/dev/null; then
+    update_readme
+    printf '  \033[32m✓\033[0m updated %s package counts\n' "$README"
+else
+    printf '  \033[33m!\033[0m brew not found, %s package counts left unchanged\n' "$README"
+fi

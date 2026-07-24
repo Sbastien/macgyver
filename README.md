@@ -22,7 +22,9 @@
 </p>
 
 <p align="center">
-  <strong>50+ CLI tools · 15+ apps · 4 Nerd Fonts</strong>
+  <!-- stats:start --><!-- written by bin/generate, do not edit -->
+  <strong>62 CLI tools · 20 apps · 4 Nerd Fonts</strong>
+  <!-- stats:end -->
 </p>
 
 <p align="center">
@@ -136,7 +138,14 @@ chezmoi init --apply Sbastien
 2. Replace the username in your clone:
 
    ```bash
-   sed -i '' "s/Sbastien/$YOUR_USERNAME/g" docs/index.html docs/install.sh
+   YOUR_USERNAME=your-github-username
+
+   # Prose uses the capitalised form, URLs use the lowercase one, and the
+   # name appears in five files including LICENSE — so match both cases
+   # everywhere rather than listing files by hand.
+   grep -ril sbastien --exclude-dir=.git . | xargs sed -i '' \
+     -e "s/Sbastien/$YOUR_USERNAME/g" \
+     -e "s/sbastien/$(echo "$YOUR_USERNAME" | tr '[:upper:]' '[:lower:]')/g"
    ```
 
 3. Edit `profiles/*.Brewfile` to add/remove packages, then run `mise run generate`
