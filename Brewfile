@@ -88,12 +88,20 @@ brew "trivy"                # Container scanner
 # Language runtimes (rust, node, python, ruby, ...) are not installed here.
 # They are mise's job: `mise use rust@latest` in a project, or in the global
 # ~/.config/mise/config.toml.
+#
+# shellcheck and shfmt are absent on purpose: this repository pins them in its
+# own mise.toml, so installing them here too meant two copies of each, with
+# Homebrew's winning on PATH. That file is tracked, so nothing is lost.
+#
+# Other CLIs stay with Homebrew even where a project might want to pin them.
+# A mise tool is only on PATH once mise activates, and the global mise config
+# is not version-controlled today — moving a tool there would trade a tracked
+# declaration for an untracked one. See "Tools managed by mise" in the README.
 brew "mise"                 # Polyglot runtime manager (bootstraps the rest)
 brew "direnv"               # Per-directory env vars
 brew "watchman"             # File watcher
-brew "shellcheck"           # Shell script linter
-brew "shfmt"                # Shell script formatter
 brew "biome"                # Fast JS/TS linter & formatter
+brew "uv"                   # Python package manager
 brew "gum"                  # Elegant shell scripts
 brew "mas"                  # Mac App Store CLI
 brew "pre-commit"           # Git hooks manager
