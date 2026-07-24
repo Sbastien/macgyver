@@ -5,3 +5,8 @@
 #
 #   mise run install:personal
 # =============================================================================
+
+# Apps
+# @icon:rocket
+cask "spotify"              # Music
+cask "vivaldi"              # Browser

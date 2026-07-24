@@ -59,6 +59,10 @@ brew "xh"                   # HTTPie replacement
 brew "fastfetch"            # System info display
 brew "nmap"                 # Network scanner
 brew "trash"                # Safe rm replacement
+brew "curl"                 # Newer than the system one
+brew "wget"                 # Recursive downloader
+brew "openssh"              # Newer than the system one
+brew "unar"                 # Archive extraction (CLI)
 
 # Git & Version Control
 # @icon:git
@@ -68,6 +72,7 @@ brew "lazygit"              # Git TUI
 brew "gh"                   # GitHub CLI
 brew "git-lfs"              # Large file storage
 brew "gitleaks"             # Git secrets scanner
+brew "git-filter-repo"      # History rewriting
 
 # Security & Privacy
 # @icon:shield
@@ -93,34 +98,34 @@ brew "gum"                  # Elegant shell scripts
 brew "mas"                  # Mac App Store CLI
 brew "pre-commit"           # Git hooks manager
 brew "act"                  # Run GitHub Actions locally
+brew "cmake"                # Build system
+brew "pkgconf"              # Build flag helper
+brew "rtk"                  # Token-optimised CLI proxy
 
 # Databases
 # @icon:database
-# Servers stay with Homebrew rather than mise: they run as launchd services
-# via `brew services`, and one global instance is the intent. Pin a different
-# version with mise inside a project only when that project actually needs it.
+# Database *servers* live in the work profile: they run as launchd services and
+# are only wanted on a machine that needs them. sqlite is a library, not a
+# service, so it stays here.
 brew "sqlite"               # Lightweight database
-brew "redis"                # In-memory data store (brew services start redis)
-brew "postgresql@16"        # PostgreSQL server (brew services start postgresql@16)
 
 # Productivity Apps
 # @icon:rocket
 cask "raycast"              # Spotlight replacement
 cask "notion"               # Notes & docs
 cask "hiddenbar"            # Menu bar manager
-cask "slack"                # Team chat
 cask "bitwarden"            # Password manager
-cask "mattermost"           # Team chat (open-source)
 
 # Development Apps
 # @icon:apps
-cask "iterm2"               # Terminal emulator
-cask "warp"                 # Modern terminal
+cask "ghostty"              # Terminal emulator
 cask "visual-studio-code"   # Code editor
 cask "docker-desktop"       # Containers
 brew "lazydocker"           # Docker TUI
 cask "bruno"                # API client
 cask "zen"                  # Privacy browser
+cask "google-chrome"        # Cross-browser testing
+cask "firefox"              # Cross-browser testing
 cask "tableplus"            # Database GUI
 cask "claude"               # Claude AI desktop app
 
