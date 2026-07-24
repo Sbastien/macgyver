@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+#
+# Audit this machine against what the repository declares.
+#
+# Two of the three checks are `brew bundle` in a trench coat, and that is the
+# point. What is left is the one question Homebrew will never answer — whether
+# a tool is claimed by both Homebrew and mise.
+#
+# Read-only. Nothing here installs, uninstalls or modifies anything.
+#
+# Usage: bin/doctor   (from anywhere)
+
+set -uo pipefail
+
+# Found next to the script, not in $PWD: the dotfiles repository calls this
+# by absolute path.
+BREWFILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/Brewfile"
+readonly BREWFILE
+
+problems=0
+warnings=0
+
+section() { printf '\n\033[1m%s\033[0m\n' "$1"; }
+ok() { printf '  \033[32m✓\033[0m %s\n' "$1"; }
+detail() { printf '      %s\n' "$1"; }
+warn() {
+    printf '  \033[33m!\033[0m %s\n' "$1"
+    warnings=$((warnings + 1))
+}
+bad() {
+    printf '  \033[31m✗\033[0m %s\n' "$1"
+    problems=$((problems + 1))
+}
+
+command -v brew &>/dev/null || {
+    printf 'Homebrew not found.\n' >&2
+    exit 1
+}
+[[ -f "$BREWFILE" ]] || {
+    printf 'Expected a Brewfile at %s and found none.\n' "$BREWFILE" >&2
+    exit 1
+}
+
+# -----------------------------------------------------------------------------
+
+check_missing() {
+    section "Declared but not installed"
+
+    # --verbose names the packages rather than only failing. --no-upgrade
+    # keeps the heading honest: without it, a package one bottle behind is
+    # reported as missing. `brew outdated` asks the version question.
+    if brew bundle check --file="$BREWFILE" --no-upgrade --verbose; then
+        ok "everything declared is installed"
+    else
+        warnings=$((warnings + 1))
+    fi
+}
+
+check_undeclared() {
+    section "Installed but not declared"
+
+    # `cleanup` without --force only reports, and one pass covers formulae,
+    # casks and third-party taps together. It exits 0 whether or not it finds
+    # anything, so the output is what has to be read.
+    # Match the verbs, not a bare `^Would `: the output also carries a cache
+    # section that any warm machine has. Those lines are dropped from the
+    # report too.
+    local drift
+    drift=$(brew bundle cleanup --file="$BREWFILE" 2>&1)
+
+    if printf '%s\n' "$drift" | grep -qE '^Would (uninstall|untap)'; then
+        printf '%s\n' "$drift" | grep -v -e "^Would \`brew cleanup\`" -e '^Would remove:'
+        warnings=$((warnings + 1))
+    else
+        ok "nothing installed outside the Brewfile"
+    fi
+}
+
+# mise tool names and Homebrew formula names do not always match
+brew_equivalents() {
+    case "$1" in
+        postgres) printf 'postgresql\n' ;;
+        rust) printf 'rustup\nrust\n' ;;
+        java) printf 'openjdk\n' ;;
+        *) printf '%s\n' "$1" ;;
+    esac
+}
+
+# The one rule this repository has, and the only check Homebrew cannot do for
+# it: two managers owning one tool means two copies on disk and one silently
+# shadowing the other on PATH.
+check_manager_overlap() {
+    section "Homebrew / mise overlap"
+
+    command -v mise &>/dev/null || {
+        warn "mise not found, skipping"
+        return
+    }
+    command -v jq &>/dev/null || {
+        warn "jq not found, skipping"
+        return
+    }
+
+    # Only leaves count. A formula pulled in as a dependency — python@3.14 is
+    # required by seven packages here — is keg-only and not a tool Homebrew
+    # offers the user, so it does not compete with mise's copy.
+    #
+    # Strip @version so postgresql@16 matches a mise "postgres" entry.
+    local brew_names found=0 tool name
+    brew_names=$(brew leaves 2>/dev/null | sed 's/@.*//' | sort -u)
+
+    for tool in $(mise ls --json 2>/dev/null | jq -r 'keys[]'); do
+        for name in $(brew_equivalents "$tool"); do
+            printf '%s\n' "$brew_names" | grep -qx "$name" || continue
+
+            local brew_v mise_v winner
+            brew_v=$(brew list --versions "$name" 2>/dev/null | awk '{print $2}')
+            [[ -z "$brew_v" ]] && brew_v=$(brew list --formula --versions 2>/dev/null |
+                awk -v n="$name" '$1 ~ "^"n"@" {print $2; exit}')
+            mise_v=$(mise ls --json 2>/dev/null | jq -r --arg t "$tool" '[.[$t][].version] | join(", ")')
+            winner=$(command -v "$tool" 2>/dev/null || printf 'not on PATH')
+
+            bad "$tool is managed by both"
+            detail "Homebrew $brew_v   mise $mise_v"
+            detail "PATH resolves to: $winner"
+            found=1
+        done
+    done
+
+    ((found == 0)) && ok "no tool is claimed by both managers"
+}
+
+# -----------------------------------------------------------------------------
+
+printf '\n\033[1mBrewfile doctor\033[0m — auditing this machine against the Brewfile\n'
+
+check_missing
+check_undeclared
+check_manager_overlap
+
+section "Summary"
+if ((problems == 0 && warnings == 0)); then
+    ok "machine matches the Brewfile"
+elif ((problems == 0)); then
+    # Drift is a warning: an undeclared package is a decision waiting to be
+    # made, not a broken machine. Two managers owning one tool is the problem.
+    printf '  %s warning(s), nothing broken\n' "$warnings"
+else
+    printf '  \033[31m%s problem(s)\033[0m, %s warning(s)\n' "$problems" "$warnings"
+fi
+printf '\n'
+
+((problems == 0))
