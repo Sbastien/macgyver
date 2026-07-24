@@ -55,6 +55,28 @@ curl -fsSL https://raw.githubusercontent.com/Sbastien/Brewfile/main/Brewfile | b
 
 </details>
 
+## Profiles
+
+The root `Brewfile` is a build artifact generated from `profiles/base.Brewfile`.
+Don't edit it — edit a profile and regenerate.
+
+```bash
+mise run generate           # rebuild the root Brewfile from profiles/
+mise run install            # base only, what the one-line install gives you
+mise run install:work       # base + work
+mise run install:personal   # base + personal
+```
+
+| Profile | Contents |
+|---|---|
+| `base` | The baseline every machine gets. Generated into the root `Brewfile`. |
+| `work` | Local service stack, company apps, CI clients. |
+| `personal` | Media, browsers, everything unrelated to work. |
+| `experimental` | Tried once, kept just in case. Candidates for deletion. |
+
+`mise` is only a task runner here — those install tasks shell out to
+`brew bundle`. It never installs a Homebrew package itself.
+
 ## Next Step
 
 This Brewfile installs the tools — my [dotfiles](https://github.com/Sbastien/dotfiles) configure them.
@@ -73,7 +95,7 @@ chezmoi init --apply Sbastien
    sed -i '' "s/Sbastien/$YOUR_USERNAME/g" docs/index.html docs/install.sh
    ```
 
-3. Edit the `Brewfile` to add/remove packages
+3. Edit `profiles/*.Brewfile` to add/remove packages, then run `mise run generate`
 
 <br>
 

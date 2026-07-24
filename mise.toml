@@ -1,16 +1,61 @@
-# Development tooling for this repository.
+# mise plays two separate roles in this repository. They are easy to confuse.
 #
-# Versions are pinned so that a local run and a CI run check exactly the same
-# thing. CI installs these with jdx/mise-action instead of piping an unpinned
-# third-party installer script into a shell.
+#   [tools]   mise installs these itself. Only the tooling this repo needs to
+#             lint and check itself. Pinned so a local run and a CI run check
+#             exactly the same thing.
+#
+#   [tasks]   mise runs these. It is a task runner here, nothing more — the
+#             install tasks below shell out to `brew bundle`. mise never
+#             installs a Homebrew package.
 
 [tools]
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 
+# -----------------------------------------------------------------------------
+# Installing packages — these call Homebrew, they do not use mise's own tooling
+# -----------------------------------------------------------------------------
+
+[tasks.install]
+description = "Install the base profile"
+run = "brew bundle --file=profiles/base.Brewfile"
+
+[tasks."install:work"]
+description = "Install base + work"
+run = [
+    "brew bundle --file=profiles/base.Brewfile",
+    "brew bundle --file=profiles/work.Brewfile",
+]
+
+[tasks."install:personal"]
+description = "Install base + personal"
+run = [
+    "brew bundle --file=profiles/base.Brewfile",
+    "brew bundle --file=profiles/personal.Brewfile",
+]
+
+[tasks."install:experimental"]
+description = "Install base + experimental"
+run = [
+    "brew bundle --file=profiles/base.Brewfile",
+    "brew bundle --file=profiles/experimental.Brewfile",
+]
+
+# -----------------------------------------------------------------------------
+# Repository maintenance
+# -----------------------------------------------------------------------------
+
+[tasks.generate]
+description = "Regenerate the root Brewfile from profiles/"
+run = "./bin/generate"
+
 [tasks.validate]
-description = "Validate the Brewfile: syntax, duplicates, conventions"
-run = "./bin/validate"
+description = "Check the root Brewfile is current, then validate it and every profile"
+run = [
+    "./bin/generate --check",
+    "./bin/validate Brewfile",
+    "for p in profiles/*.Brewfile; do ./bin/validate \"$p\"; done",
+]
 
 [tasks."check:deprecated"]
 description = "Report Brewfile packages Homebrew has deprecated or disabled"

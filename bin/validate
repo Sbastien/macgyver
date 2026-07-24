@@ -48,7 +48,7 @@ check_syntax() {
 
     local errors
     if errors=$(brew bundle list --all --file="$BREWFILE" 2>&1 >/dev/null); then
-        ok "Brewfile parses"
+        ok "$BREWFILE parses"
     else
         fail "Brewfile does not parse"
         printf '%s\n' "$errors" | sed 's/^/      /' >&2
@@ -135,7 +135,7 @@ summary() {
 
     if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
         {
-            printf '### Brewfile\n\n'
+            printf '### %s\n\n' "$BREWFILE"
             printf '| Type | Count |\n|------|-------|\n'
             printf '| Formulae | %s |\n' "$formulae"
             printf '| Casks | %s |\n' "$((casks - fonts))"
