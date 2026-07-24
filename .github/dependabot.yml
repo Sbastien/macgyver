@@ -1,0 +1,14 @@
+version: 2
+
+updates:
+  # Actions are pinned to commit SHAs, which is safe but goes stale silently.
+  # Dependabot bumps the SHA and rewrites the trailing version comment, so the
+  # pins stay both immutable and current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci'
+    labels:
+      - dependencies
