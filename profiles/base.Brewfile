@@ -12,10 +12,6 @@
 # of them silently shadowing the other on PATH.
 # =============================================================================
 
-# Options
-# @icon:cog
-cask_args quarantine: false
-
 # Terminal & Shell
 # @icon:terminal
 brew "zsh"                  # Modern shell
@@ -25,7 +21,6 @@ brew "neovim"               # Modern vim
 brew "starship"             # Cross-shell prompt
 brew "zoxide"               # Smarter cd command
 brew "chezmoi"              # Dotfiles manager
-brew "thefuck"              # Correct previous command
 brew "atuin"                # Shell history search
 
 # Modern CLI Tools
@@ -98,7 +93,6 @@ brew "watchman"             # File watcher
 brew "biome"                # Fast JS/TS linter & formatter
 brew "uv"                   # Python package manager
 brew "gum"                  # Elegant shell scripts
-brew "mas"                  # Mac App Store CLI
 brew "pre-commit"           # Git hooks manager
 brew "act"                  # Run GitHub Actions locally
 brew "cmake"                # Build system
@@ -135,7 +129,6 @@ cask "claude"               # Claude AI desktop app
 # Utility Apps
 # @icon:puzzle
 cask "alt-tab"              # Windows-style alt-tab
-cask "gas-mask"             # Hosts file manager
 cask "utm"                  # Virtual machines
 cask "the-unarchiver"       # Archive extraction
 cask "appcleaner"           # App uninstaller
