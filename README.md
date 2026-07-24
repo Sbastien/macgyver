@@ -77,6 +77,24 @@ mise run install:personal   # base + personal
 `mise` is only a task runner here — those install tasks shell out to
 `brew bundle`. It never installs a Homebrew package itself.
 
+## Doctor
+
+```bash
+mise run doctor
+```
+
+Read-only. Answers whether this Mac is actually the machine the profiles
+describe:
+
+- packages installed but declared in no profile, and the reverse
+- any tool claimed by both Homebrew and mise, with the versions and which
+  one wins on `PATH`
+- running Homebrew services, flagged if undeclared
+- a root `Brewfile` that no longer matches `profiles/`
+- packages Homebrew has deprecated or disabled
+
+Exits non-zero on a real problem; drift is reported as a warning.
+
 ## Tools managed by mise
 
 Homebrew and mise never manage the same tool. The split:

@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+#
+# Audit this machine against what the repository declares.
+#
+# Answers the question the repository could not answer before: is this Mac
+# actually the machine these profiles describe? Reports drift, tools claimed
+# by two managers at once, running services, and a stale generated Brewfile.
+#
+# Read-only. Nothing here installs, uninstalls or modifies anything.
+#
+# Usage: bin/doctor
+
+set -uo pipefail
+
+readonly PROFILE_GLOB="profiles/*.Brewfile"
+
+problems=0
+warnings=0
+
+ok() { printf '  \033[32m✓\033[0m %s\n' "$1"; }
+warn() {
+    printf '  \033[33m!\033[0m %s\n' "$1"
+    warnings=$((warnings + 1))
+}
+bad() {
+    printf '  \033[31m✗\033[0m %s\n' "$1"
+    problems=$((problems + 1))
+}
+section() { printf '\n\033[1m%s\033[0m\n' "$1"; }
+detail() { printf '      %s\n' "$1"; }
+
+# Wrap a long space-separated list so the terminal stays readable
+wrap() { printf '%s\n' "$1" | tr ' ' '\n' | grep -v '^$' | paste -sd' ' - | fold -sw 66 | sed 's/^/      /'; }
+
+# -----------------------------------------------------------------------------
+
+require() {
+    command -v "$1" &>/dev/null
+}
+
+check_tooling() {
+    section "Tooling"
+
+    if require brew; then
+        ok "Homebrew $(brew --version | head -1 | awk '{print $2}')"
+    else
+        bad "Homebrew not found"
+        return
+    fi
+
+    if require mise; then
+        local line
+        line=$(mise --version 2>&1 | head -1)
+        ok "mise $(printf '%s' "$line" | awk '{print $1}')"
+    else
+        warn "mise not found — runtimes and pinned linters are unmanaged"
+    fi
+
+    if require chezmoi; then
+        ok "chezmoi $(chezmoi --version | awk '{print $3}' | tr -d ',')"
+    else
+        warn "chezmoi not found — dotfiles are unmanaged"
+    fi
+}
+
+check_generated() {
+    section "Generated Brewfile"
+
+    if [[ ! -x bin/generate ]]; then
+        warn "bin/generate not found, skipping"
+        return
+    fi
+
+    if bin/generate --check >/dev/null 2>&1; then
+        ok "Brewfile matches profiles/"
+    else
+        bad "Brewfile is out of date — run: mise run generate"
+    fi
+}
+
+# Everything any profile declares
+declared_packages() {
+    local file
+    for file in $PROFILE_GLOB; do
+        [[ -f "$file" ]] || continue
+        brew bundle list --formula --file="$file" 2>/dev/null
+        brew bundle list --cask --file="$file" 2>/dev/null
+    done | sort -u
+}
+
+check_drift() {
+    section "Drift"
+
+    local declared leaves present extra missing
+
+    declared=$(declared_packages)
+
+    # Leaves are what was asked for explicitly; the full list also contains
+    # packages pulled in as dependencies, which must not count as missing.
+    leaves=$(
+        {
+            brew leaves
+            brew list --cask
+        } 2>/dev/null | sort -u
+    )
+    present=$(
+        {
+            brew list --formula
+            brew list --cask
+        } 2>/dev/null | sort -u
+    )
+
+    extra=$(comm -23 <(printf '%s\n' "$leaves") <(printf '%s\n' "$declared") | tr '\n' ' ')
+    missing=$(comm -13 <(printf '%s\n' "$present") <(printf '%s\n' "$declared") | tr '\n' ' ')
+
+    if [[ -n "${extra// /}" ]]; then
+        warn "installed but declared in no profile:"
+        wrap "$extra"
+    else
+        ok "nothing installed outside the profiles"
+    fi
+
+    if [[ -n "${missing// /}" ]]; then
+        warn "declared but not installed:"
+        wrap "$missing"
+    else
+        ok "everything declared is installed"
+    fi
+}
+
+# mise tool names and Homebrew formula names do not always match
+brew_equivalents() {
+    case "$1" in
+        postgres) printf 'postgresql\n' ;;
+        rust) printf 'rustup\nrust\n' ;;
+        java) printf 'openjdk\n' ;;
+        *) printf '%s\n' "$1" ;;
+    esac
+}
+
+check_manager_overlap() {
+    section "Homebrew / mise overlap"
+
+    require mise || return
+    require jq || {
+        warn "jq not found, skipping"
+        return
+    }
+
+    # Only leaves count. A formula pulled in as a dependency — python@3.14 is
+    # required by seven packages here — is keg-only and not a tool Homebrew
+    # offers the user, so it does not compete with mise's copy.
+    #
+    # Strip @version so postgresql@16 matches a mise "postgres" entry.
+    local brew_names found=0 tool name
+    brew_names=$(brew leaves 2>/dev/null | sed 's/@.*//' | sort -u)
+
+    for tool in $(mise ls --json 2>/dev/null | jq -r 'keys[]'); do
+        for name in $(brew_equivalents "$tool"); do
+            if printf '%s\n' "$brew_names" | grep -qx "$name"; then
+                local brew_v mise_v winner
+                brew_v=$(brew list --versions "$name" 2>/dev/null | awk '{print $2}')
+                [[ -z "$brew_v" ]] && brew_v=$(brew list --formula --versions 2>/dev/null |
+                    awk -v n="$name" '$1 ~ "^"n"@" {print $2; exit}')
+                mise_v=$(mise ls --json 2>/dev/null | jq -r --arg t "$tool" '[.[$t][].version] | join(", ")')
+                winner=$(command -v "$tool" 2>/dev/null || printf 'not on PATH')
+
+                bad "$tool is managed by both"
+                detail "Homebrew $brew_v   mise $mise_v"
+                detail "PATH resolves to: $winner"
+                found=1
+            fi
+        done
+    done
+
+    ((found == 0)) && ok "no tool is claimed by both managers"
+}
+
+check_services() {
+    section "Homebrew services"
+
+    require brew || return
+
+    local running
+    running=$(brew services list 2>/dev/null | awk 'NR > 1 && $2 == "started" {print $1}')
+
+    if [[ -z "$running" ]]; then
+        ok "no services running"
+        return
+    fi
+
+    local declared svc
+    declared=$(declared_packages)
+
+    while IFS= read -r svc; do
+        [[ -n "$svc" ]] || continue
+        if printf '%s\n' "$declared" | grep -qx "$svc"; then
+            ok "$svc running (declared)"
+        else
+            warn "$svc running but declared in no profile"
+        fi
+    done <<<"$running"
+}
+
+check_deprecated() {
+    section "Upstream deprecation"
+
+    if [[ ! -x bin/check-deprecated ]]; then
+        warn "bin/check-deprecated not found, skipping"
+        return
+    fi
+
+    local output
+    if output=$(bin/check-deprecated 2>&1); then
+        ok "no deprecated or disabled packages"
+    elif printf '%s' "$output" | grep -q "need attention"; then
+        printf '%s\n' "$output" | grep '!' | sed 's/^  //' | while IFS= read -r line; do
+            printf '  \033[33m%s\033[0m\n' "$line"
+        done
+        warnings=$((warnings + 1))
+    else
+        warn "could not check (offline?)"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+
+printf '\n\033[1mBrewfile doctor\033[0m — auditing this machine against the profiles\n'
+
+check_tooling
+check_generated
+check_drift
+check_manager_overlap
+check_services
+check_deprecated
+
+section "Summary"
+if ((problems == 0 && warnings == 0)); then
+    ok "machine matches the profiles"
+elif ((problems == 0)); then
+    printf '  %s warning(s), nothing broken\n' "$warnings"
+else
+    printf '  \033[31m%s problem(s)\033[0m, %s warning(s)\n' "$problems" "$warnings"
+fi
+printf '\n'
+
+((problems == 0))

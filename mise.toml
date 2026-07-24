@@ -45,6 +45,10 @@ run = [
 # Repository maintenance
 # -----------------------------------------------------------------------------
 
+[tasks.doctor]
+description = "Audit this machine against the profiles (read-only)"
+run = "./bin/doctor"
+
 [tasks.generate]
 description = "Regenerate the root Brewfile from profiles/"
 run = "./bin/generate"
