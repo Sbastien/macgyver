@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Nothing here writes to the repository, and this file travels to anyone who
+# uses the template button.
+permissions:
+  contents: read
+
+jobs:
+  # One job on macOS. Linting alone would run on Linux, but resolving a
+  # Brewfile needs Homebrew, so the expensive runner is already required —
+  # splitting the lint onto ubuntu would buy a few seconds and cost a second
+  # job to read. macOS runners are free on public repositories.
+  check:
+    name: Lint and check
+    runs-on: macos-latest
+    # The check calls Homebrew's API; the default timeout is six hours.
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # Installs the shellcheck and shfmt versions pinned in mise.toml, so CI
+      # and a local `mise run lint` cannot disagree about what is correct.
+      - name: Setup mise
+        uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14  # v4.2.3
+
+      # One task, defined in mise.toml, so "this is what CI runs" is a fact
+      # rather than two command lines kept in step by hand.
+      # install.sh is linted, not executed: nothing exercises its control flow.
+      - name: Lint and check
+        run: mise run ci
