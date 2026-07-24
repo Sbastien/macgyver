@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # One job on macOS. Linting alone would run on Linux, but parsing a Brewfile
+  # needs Homebrew, so the expensive runner is already required — splitting the
+  # lint onto ubuntu would buy a few seconds and cost a second job to read.
+  check:
+    name: Lint and parse
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # Installs the shellcheck and shfmt versions pinned in mise.toml, so CI
+      # and a local `mise run lint` cannot disagree about what is correct.
+      - name: Setup mise
+        uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14  # v4.2.3
+
+      # install.sh is linted, not executed. It used to carry a --dry-run mode
+      # for CI to run end to end; that mode was a third of the script, existed
+      # only to be tested, and went when the script came down to eighty lines.
+      # The trade is real: a typo in a variable name would ship.
+      - name: Lint
+        run: mise run lint
+
+      - name: Parse the Brewfile
+        run: brew bundle list --all --file=Brewfile
