@@ -1,3 +1,17 @@
+# =============================================================================
+# What belongs in this file
+#
+#   Homebrew  anything that must exist before mise does (git, curl, zsh, mise
+#             itself), GUI applications, launchd services, system libraries.
+#
+#   mise      language runtimes, and any CLI whose version a project may need
+#             to pin. Declared per project in mise.toml, or globally in
+#             ~/.config/mise/config.toml.
+#
+# Never both. Two managers for one tool means two installed versions and one
+# of them silently shadowing the other on PATH.
+# =============================================================================
+
 # Options
 # @icon:cog
 cask_args quarantine: false
@@ -65,8 +79,10 @@ brew "trivy"                # Container scanner
 
 # Development Tools
 # @icon:tools
-brew "mise"                 # Polyglot runtime manager
-brew "rustup"               # Rust toolchain
+# Language runtimes (rust, node, python, ruby, ...) are not installed here.
+# They are mise's job: `mise use rust@latest` in a project, or in the global
+# ~/.config/mise/config.toml.
+brew "mise"                 # Polyglot runtime manager (bootstraps the rest)
 brew "direnv"               # Per-directory env vars
 brew "watchman"             # File watcher
 brew "shellcheck"           # Shell script linter
@@ -79,9 +95,12 @@ brew "act"                  # Run GitHub Actions locally
 
 # Databases
 # @icon:database
+# Servers stay with Homebrew rather than mise: they run as launchd services
+# via `brew services`, and one global instance is the intent. Pin a different
+# version with mise inside a project only when that project actually needs it.
 brew "sqlite"               # Lightweight database
-brew "redis"                # In-memory data store
-brew "postgresql@16"        # PostgreSQL database
+brew "redis"                # In-memory data store (brew services start redis)
+brew "postgresql@16"        # PostgreSQL server (brew services start postgresql@16)
 
 # Productivity Apps
 # @icon:rocket
