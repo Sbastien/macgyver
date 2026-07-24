@@ -1,0 +1,42 @@
+# mise plays two separate roles in this repository. They are easy to confuse.
+#
+#   [tools]   mise installs these itself. Only the tooling this repo needs to
+#             lint and check itself. Pinned so a local run and a CI run check
+#             exactly the same thing.
+#
+#   [tasks]   mise runs these. It is a task runner here, nothing more — the
+#             install tasks below shell out to `brew bundle`. mise never
+#             installs a Homebrew package.
+
+[tools]
+shellcheck = "0.11.0"
+shfmt = "3.13.1"
+
+# -----------------------------------------------------------------------------
+# Installing packages — these call Homebrew, they do not use mise's own tooling
+# -----------------------------------------------------------------------------
+
+[tasks.install]
+description = "Install everything in the Brewfile"
+# `install` is the default subcommand, but brew bundle has nine of them now
+# and naming the one you mean costs nothing.
+run = "brew bundle install --file=Brewfile"
+
+# -----------------------------------------------------------------------------
+# Repository maintenance
+# -----------------------------------------------------------------------------
+
+[tasks.doctor]
+description = "Audit this machine against the Brewfile (read-only)"
+run = "./bin/doctor"
+
+[tasks.lint]
+description = "Lint and format-check shell scripts"
+run = [
+    "shellcheck bin/doctor install.sh",
+    "shfmt -i 4 -ci -d bin/doctor install.sh",
+]
+
+[tasks.fmt]
+description = "Format shell scripts in place"
+run = "shfmt -i 4 -ci -w bin/doctor install.sh"
