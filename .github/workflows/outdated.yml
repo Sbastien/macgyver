@@ -7,34 +7,20 @@ on:
 
 jobs:
   check-deprecated:
+    name: Deprecated packages
     runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check for deprecated packages
-        run: |
-          echo "### Deprecated Package Check" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Ensure jq is available
+        run: command -v jq >/dev/null || brew install jq
 
-          found_deprecated=false
-
-          # Extract package names from Brewfile
-          while IFS= read -r line; do
-            # Match brew "package" or cask "package"
-            if [[ "$line" =~ ^(brew|cask)[[:space:]]+\"([^\"]+)\" ]]; then
-              pkg="${BASH_REMATCH[2]}"
-
-              # Check if deprecated or disabled
-              info=$(brew info "$pkg" 2>/dev/null || true)
-              if echo "$info" | grep -qi "deprecated\|disabled"; then
-                echo "::warning::Package $pkg may be deprecated"
-                echo "- ⚠️ \`$pkg\` may be deprecated" >> $GITHUB_STEP_SUMMARY
-                found_deprecated=true
-              fi
-            fi
-          done < Brewfile
-
-          if [ "$found_deprecated" = false ]; then
-            echo "✅ No deprecated packages found" >> $GITHUB_STEP_SUMMARY
-          fi
+      # Queries the JSON API once for the whole Brewfile. The previous version
+      # ran `brew info` per package and grepped its prose for "deprecated",
+      # which also matched packages merely mentioning the word.
+      #
+      # This step fails when something is deprecated, so the scheduled run
+      # notifies instead of hiding the result in a job summary nobody reads.
+      - name: Check for deprecated or disabled packages
+        run: ./bin/check-deprecated

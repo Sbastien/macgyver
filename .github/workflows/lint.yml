@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -14,16 +15,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: ShellCheck
-        uses: ludeeus/action-shellcheck@2.0.0
-        with:
-          scandir: ./docs
-          severity: warning
+      # Installs the shellcheck and shfmt versions pinned in mise.toml, so CI
+      # and a local `mise run lint` cannot disagree about what is correct.
+      - name: Setup mise
+        uses: jdx/mise-action@v4.2.3
 
-      - name: Install shfmt
-        run: |
-          curl -sS https://webi.sh/shfmt | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: shfmt
-        run: shfmt -i 4 -ci -d ./docs/*.sh
+      - name: Lint
+        run: mise run lint
