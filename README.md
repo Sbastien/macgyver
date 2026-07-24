@@ -77,6 +77,32 @@ mise run install:personal   # base + personal
 `mise` is only a task runner here — those install tasks shell out to
 `brew bundle`. It never installs a Homebrew package itself.
 
+## Tools managed by mise
+
+Homebrew and mise never manage the same tool. The split:
+
+| | Owns |
+|---|---|
+| **Homebrew** | Anything needed before mise exists (git, curl, zsh, mise), GUI apps, launchd services, system libraries, daily-driver CLIs no project pins |
+| **mise** | Language runtimes, and any CLI whose exact version changes its output — linters and formatters above all |
+
+`shellcheck` and `shfmt` are the only CLIs moved out of the Brewfile so far.
+This repo pins them in its own `mise.toml`, so having them in both places
+meant two installed copies with Homebrew's winning on `PATH`.
+
+Everything else stays with Homebrew for now, including linters a project
+might want to pin. Two reasons:
+
+- A mise tool is only on `PATH` once mise activates. Homebrew's `bin` is
+  always there, including in scripts and non-interactive shells.
+- The global mise config (`~/.config/mise/config.toml`) is **not
+  version-controlled**. Moving a tool from this repo to there trades a
+  tracked, CI-validated declaration for an untracked one — a net loss for a
+  repository whose point is reproducibility.
+
+Fixing the second reason (having chezmoi manage the global mise config) is
+the prerequisite for moving anything else.
+
 ## Next Step
 
 This Brewfile installs the tools — my [dotfiles](https://github.com/Sbastien/dotfiles) configure them.
