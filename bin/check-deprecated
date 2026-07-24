@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+#
+# Report Brewfile packages that Homebrew has deprecated or disabled.
+#
+# Queries the JSON API once for the whole Brewfile. The previous approach ran
+# `brew info` per package and grepped its output for the word "deprecated",
+# which also matched packages that merely mention the word in their
+# description or caveats.
+#
+# Usage: bin/check-deprecated [path-to-Brewfile]
+
+set -euo pipefail
+
+readonly BREWFILE="${1:-Brewfile}"
+
+command -v brew &>/dev/null || {
+    printf '  brew not found\n' >&2
+    exit 1
+}
+command -v jq &>/dev/null || {
+    printf '  jq not found\n' >&2
+    exit 1
+}
+
+[[ -f "$BREWFILE" ]] || {
+    printf '  %s not found\n' "$BREWFILE" >&2
+    exit 1
+}
+
+# Entries from third-party taps cannot be queried without `brew trust`, which
+# this script deliberately does not run. They are skipped and reported, so the
+# gap is visible rather than silent.
+all=$(
+    brew bundle list --formula --file="$BREWFILE"
+    brew bundle list --cask --file="$BREWFILE"
+)
+
+# `brew bundle list` prints tapped entries by their bare token, so the tap
+# qualifier has to be read from the Brewfile itself.
+tapped=$(sed -nE 's/^(brew|cask)[[:space:]]+"([^"]*\/[^"]*)".*/\2/p' "$BREWFILE")
+
+core="$all"
+for entry in $tapped; do
+    core=$(printf '%s\n' "$core" | grep -vxF "${entry##*/}" || true)
+done
+core=$(printf '%s\n' "$core" | tr '\n' ' ')
+
+printf '\n  Checking %s core packages\n' "$(printf '%s' "$core" | wc -w | tr -d ' ')"
+
+if [[ -n "$tapped" ]]; then
+    printf '\n  Skipped (third-party tap, needs "brew trust" to query):\n'
+    printf '%s\n' "$tapped" | sed 's/^/    /'
+fi
+
+printf '\n'
+
+# Word splitting is intended here: brew takes a list of names
+# shellcheck disable=SC2086
+info=$(brew info --json=v2 $core)
+
+readonly JQ_FILTER='
+  def entry(kind; name):
+    select(.deprecated or .disabled)
+    | {
+        kind: kind,
+        name: name,
+        state: (if .disabled then "disabled" else "deprecated" end),
+        reason: (.disable_reason // .deprecation_reason // "no reason given"),
+        date: (.disable_date // .deprecation_date)
+      };
+
+  [ .formulae[] | entry("formula"; .name) ]
+  + [ .casks[] | entry("cask"; .token) ]
+  | .[]
+  | "\(.kind)\t\(.name)\t\(.state)\t\(.reason)\t\(.date // "")"
+'
+
+findings=$(printf '%s' "$info" | jq -r "$JQ_FILTER")
+
+if [[ -z "$findings" ]]; then
+    printf '  \033[32m✓\033[0m no deprecated or disabled packages\n\n'
+    [[ -n "${GITHUB_STEP_SUMMARY:-}" ]] &&
+        printf '### Deprecated packages\n\n✅ None.\n' >>"$GITHUB_STEP_SUMMARY"
+    exit 0
+fi
+
+count=0
+
+if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    {
+        printf '### Deprecated packages\n\n'
+        printf '| Type | Package | State | Reason | Disabled on |\n'
+        printf '|------|---------|-------|--------|-------------|\n'
+    } >>"$GITHUB_STEP_SUMMARY"
+fi
+
+while IFS=$'\t' read -r kind name state reason date; do
+    [[ -n "$name" ]] || continue
+    count=$((count + 1))
+
+    if [[ -n "$date" ]]; then
+        message="$kind $name — $state ($reason), disabled on $date"
+    else
+        message="$kind $name — $state ($reason)"
+    fi
+
+    printf '  \033[33m!\033[0m %s\n' "$message"
+    [[ -n "${GITHUB_ACTIONS:-}" ]] && printf '::warning::%s\n' "$message"
+
+    # shellcheck disable=SC2016  # backticks are markdown, not a subshell
+    [[ -n "${GITHUB_STEP_SUMMARY:-}" ]] &&
+        printf '| %s | `%s` | %s | %s | %s |\n' \
+            "$kind" "$name" "$state" "$reason" "${date:-—}" >>"$GITHUB_STEP_SUMMARY"
+done <<<"$findings"
+
+printf '\n  %s package(s) need attention\n\n' "$count"
+
+# Fail so the scheduled run notifies instead of hiding the result in a summary
+exit 1

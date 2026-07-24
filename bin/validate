@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+#
+# Validate a Brewfile: syntax, duplicates, conventions.
+#
+# Shared by `mise run validate` and by CI so local and CI checks can never
+# drift apart. Exits non-zero on any error; warnings do not fail the run.
+#
+# Usage: bin/validate [path-to-Brewfile]
+
+set -euo pipefail
+
+readonly BREWFILE="${1:-Brewfile}"
+readonly INDEX_HTML="docs/index.html"
+
+status=0
+
+ok() { printf '  \033[32m✓\033[0m %s\n' "$1"; }
+
+warn() {
+    [[ -n "${GITHUB_ACTIONS:-}" ]] && printf '::warning::%s\n' "$1"
+    printf '  \033[33m!\033[0m %s\n' "$1"
+}
+
+fail() {
+    [[ -n "${GITHUB_ACTIONS:-}" ]] && printf '::error::%s\n' "$1"
+    printf '  \033[31m✗\033[0m %s\n' "$1" >&2
+    status=1
+}
+
+# -----------------------------------------------------------------------------
+
+check_exists() {
+    if [[ ! -f "$BREWFILE" ]]; then
+        fail "$BREWFILE not found"
+        exit 1
+    fi
+    ok "$BREWFILE found"
+}
+
+# `brew bundle list` evaluates the Brewfile as Ruby without touching the
+# machine, so it catches both syntax errors and unknown DSL keywords.
+# `brew bundle check` was used before, which only reports installed state.
+check_syntax() {
+    if ! command -v brew &>/dev/null; then
+        fail "brew not found, cannot validate Brewfile syntax"
+        return
+    fi
+
+    local errors
+    if errors=$(brew bundle list --all --file="$BREWFILE" 2>&1 >/dev/null); then
+        ok "Brewfile parses"
+    else
+        fail "Brewfile does not parse"
+        printf '%s\n' "$errors" | sed 's/^/      /' >&2
+    fi
+}
+
+# Compare package names as Homebrew itself resolves them, so that two entries
+# differing only by their trailing comment are still caught.
+check_duplicates() {
+    command -v brew &>/dev/null || return 0
+
+    local duplicates
+    duplicates=$(brew bundle list --all --file="$BREWFILE" 2>/dev/null | sort | uniq -d)
+
+    if [[ -n "$duplicates" ]]; then
+        fail "duplicate packages found"
+        printf '%s\n' "$duplicates" | sed 's/^/      /' >&2
+    else
+        ok "no duplicates"
+    fi
+}
+
+# Every package line carries a short description as a trailing comment.
+check_descriptions() {
+    local undocumented count
+    undocumented=$(grep -nE '^(brew|cask|mas|vscode)[[:space:]]+"[^"]+"[[:space:]]*$' "$BREWFILE" || true)
+
+    if [[ -n "$undocumented" ]]; then
+        count=$(printf '%s\n' "$undocumented" | wc -l | tr -d ' ')
+        warn "$count package(s) without a description comment"
+        printf '%s\n' "$undocumented" | sed 's/^/      /'
+    else
+        ok "all packages documented"
+    fi
+}
+
+# The website renders a section icon from the `# @icon:name` annotation that
+# follows each section title. An unknown or missing name renders nothing at
+# all, silently, so it is checked here rather than discovered in the browser.
+check_section_icons() {
+    [[ -f "$INDEX_HTML" ]] || return 0
+
+    local known
+    known=$(sed -n 's/^ *\([a-z]\{1,\}\): *.<svg.*/\1/p' "$INDEX_HTML" | sort -u)
+
+    if [[ -z "$known" ]]; then
+        warn "could not read the icon list from $INDEX_HTML, skipping icon check"
+        return 0
+    fi
+
+    local line_no=0 prev="" missing=0 unknown=0
+
+    while IFS= read -r line; do
+        line_no=$((line_no + 1))
+
+        # A section title is a comment followed by an @icon annotation
+        if [[ "$prev" =~ ^#[[:space:]]+[^@] ]]; then
+            if [[ "$line" =~ ^#[[:space:]]*@icon:([a-z]+)[[:space:]]*$ ]]; then
+                local name="${BASH_REMATCH[1]}"
+                if ! printf '%s\n' "$known" | grep -qx "$name"; then
+                    fail "$BREWFILE:$line_no unknown icon '$name' (not defined in $INDEX_HTML)"
+                    unknown=$((unknown + 1))
+                fi
+            fi
+        fi
+
+        prev="$line"
+    done <"$BREWFILE"
+
+    ((missing == 0 && unknown == 0)) && ok "section icons resolve"
+}
+
+summary() {
+    command -v brew &>/dev/null || return 0
+
+    local formulae casks taps fonts
+    formulae=$(brew bundle list --formula --file="$BREWFILE" 2>/dev/null | wc -l | tr -d ' ')
+    casks=$(brew bundle list --cask --file="$BREWFILE" 2>/dev/null | wc -l | tr -d ' ')
+    taps=$(brew bundle list --tap --file="$BREWFILE" 2>/dev/null | wc -l | tr -d ' ')
+    fonts=$(brew bundle list --cask --file="$BREWFILE" 2>/dev/null | grep -c '^font-' || true)
+
+    printf '\n  Formulae %s · Casks %s · Fonts %s · Taps %s\n' \
+        "$formulae" "$((casks - fonts))" "$fonts" "$taps"
+
+    if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+        {
+            printf '### Brewfile\n\n'
+            printf '| Type | Count |\n|------|-------|\n'
+            printf '| Formulae | %s |\n' "$formulae"
+            printf '| Casks | %s |\n' "$((casks - fonts))"
+            printf '| Fonts | %s |\n' "$fonts"
+            printf '| Taps | %s |\n' "$taps"
+        } >>"$GITHUB_STEP_SUMMARY"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+
+printf '\n  Validating %s\n\n' "$BREWFILE"
+
+check_exists
+check_syntax
+check_duplicates
+check_descriptions
+check_section_icons
+summary
+
+printf '\n'
+exit "$status"
