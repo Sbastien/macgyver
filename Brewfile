@@ -21,10 +21,6 @@
 # @icon:cog
 cask_args quarantine: false
 
-# Taps
-# @icon:link
-tap "nikitabobko/tap"
-
 # Terminal & Shell
 # @icon:terminal
 brew "zsh"                  # Modern shell
@@ -111,7 +107,6 @@ brew "postgresql@16"        # PostgreSQL server (brew services start postgresql@
 # @icon:rocket
 cask "raycast"              # Spotlight replacement
 cask "notion"               # Notes & docs
-cask "nikitabobko/tap/aerospace"    # Tiling window manager
 cask "hiddenbar"            # Menu bar manager
 cask "slack"                # Team chat
 cask "bitwarden"            # Password manager
