@@ -1,0 +1,31 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: bats
+    # macOS because the suite needs Homebrew to parse Brewfiles, and because
+    # install.sh refuses to run anywhere else.
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Setup mise
+        uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14  # v4.2.3
+
+      - name: Run the test suite
+        run: mise run test
+
+      # Runs the installer end to end against the published Brewfile. Nothing
+      # is installed: --dry-run performs the read-only steps for real and
+      # reports the rest. This is what makes install.sh executed in CI rather
+      # than only linted.
+      - name: Installer dry run
+        run: ./docs/install.sh --dry-run

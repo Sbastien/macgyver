@@ -9,6 +9,7 @@
 #             installs a Homebrew package.
 
 [tools]
+bats = "1.14.0"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 
@@ -64,6 +65,10 @@ run = [
 [tasks."check:deprecated"]
 description = "Report Brewfile packages Homebrew has deprecated or disabled"
 run = "./bin/check-deprecated"
+
+[tasks.test]
+description = "Run the bats test suite"
+run = "bats test/"
 
 [tasks.lint]
 description = "Lint and format-check shell scripts"
