@@ -39,17 +39,38 @@
 
 <br>
 
-## Quick Install
+> **This is my machine, made public.** Not a framework, not a product. Fork it,
+> read it, steal the parts you like — but expect it to change whenever my setup
+> changes, and don't expect support. The interesting parts are probably
+> `bin/doctor`, the [profile generation](#profiles), and the
+> [Homebrew/mise boundary](#tools-managed-by-mise), not my package list.
+
+## Install
+
+```bash
+git clone https://github.com/Sbastien/Brewfile && cd Brewfile
+mise run install          # base
+mise run install:work     # base + work
+```
+
+The clone is the real workflow: it is what gives you the profiles,
+`mise run doctor`, and the rest of the tasks. See what would happen first
+with `./docs/install.sh --dry-run`, which downloads and parses without
+changing anything.
+
+<details>
+<summary>One-liner, for a quick look</summary>
+<br>
 
 ```bash
 bash <(curl -fsSL https://sbastien.github.io/Brewfile/install.sh)
 ```
 
-<details>
-<summary>Direct install (without interactive prompts)</summary>
-<br>
+Installs the `base` profile and leaves no repository behind, so no profiles
+and no doctor. It also runs whatever `main` says right now — there are no
+releases to pin to. Fine for a look, worse than the clone for real use.
 
-Requires [Homebrew](https://brew.sh) to be installed first.
+Or without the installer, if Homebrew is already present:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sbastien/Brewfile/main/Brewfile | brew bundle --file=-
@@ -131,9 +152,13 @@ This Brewfile installs the tools — my [dotfiles](https://github.com/Sbastien/d
 chezmoi init --apply Sbastien
 ```
 
-## Use as Template
+## Making it yours
 
-1. Click **Use this template** above (keep the repo name `Brewfile`)
+The `work` and `personal` profiles are mine — my employer's service stack, my
+music app. Nothing in them is meant to be a recommendation. `base`, `bin/` and
+the CI are the reusable parts.
+
+1. Fork it, or click **Use this template** (keep the repo name `Brewfile`)
 
 2. Replace the username in your clone:
 
