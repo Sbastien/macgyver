@@ -22,12 +22,6 @@
 </p>
 
 <p align="center">
-  <!-- stats:start --><!-- written by bin/generate, do not edit -->
-  <strong>62 CLI tools · 20 apps · 4 Nerd Fonts</strong>
-  <!-- stats:end -->
-</p>
-
-<p align="center">
   <a href="https://sbastien.github.io/Brewfile">Website</a> •
   <a href="https://github.com/Sbastien/Brewfile/blob/main/Brewfile">View Brewfile</a> •
   <a href="https://github.com/Sbastien/dotfiles">Dotfiles</a>
@@ -42,21 +36,20 @@
 > **This is my machine, made public.** Not a framework, not a product. Fork it,
 > read it, steal the parts you like — but expect it to change whenever my setup
 > changes, and don't expect support. The interesting parts are probably
-> `bin/doctor`, the [profile generation](#profiles), and the
+> `bin/doctor`, the [shared local/CI checks](#doctor), and the
 > [Homebrew/mise boundary](#tools-managed-by-mise), not my package list.
 
 ## Install
 
 ```bash
 git clone https://github.com/Sbastien/Brewfile && cd Brewfile
-mise run install          # base
-mise run install:work     # base + work
+mise run install
 ```
 
-The clone is the real workflow: it is what gives you the profiles,
-`mise run doctor`, and the rest of the tasks. See what would happen first
-with `./docs/install.sh --dry-run`, which downloads and parses without
-changing anything.
+The clone is the real workflow: it is what gives you `mise run doctor` and
+the rest of the tasks. See what would happen first with
+`./docs/install.sh --dry-run`, which downloads and parses without changing
+anything.
 
 <details>
 <summary>One-liner, for a quick look</summary>
@@ -66,8 +59,8 @@ changing anything.
 bash <(curl -fsSL https://sbastien.github.io/Brewfile/install.sh)
 ```
 
-Installs the `base` profile and leaves no repository behind, so no profiles
-and no doctor. It also runs whatever `main` says right now — there are no
+Installs the packages and leaves no repository behind, so no doctor and no
+tasks. It also runs whatever `main` says right now — there are no
 releases to pin to. Fine for a look, worse than the clone for real use.
 
 Or without the installer, if Homebrew is already present:
@@ -78,27 +71,19 @@ curl -fsSL https://raw.githubusercontent.com/Sbastien/Brewfile/main/Brewfile | b
 
 </details>
 
-## Profiles
+## One file
 
-The root `Brewfile` is a build artifact generated from `profiles/base.Brewfile`.
-Don't edit it — edit a profile and regenerate.
+Everything lives in a single `Brewfile`, grouped into commented sections.
 
-```bash
-mise run generate           # rebuild the root Brewfile from profiles/
-mise run install            # base only, what the one-line install gives you
-mise run install:work       # base + work
-mise run install:personal   # base + personal
-```
+There used to be four profiles — `base`, `work`, `personal`, `experimental` —
+with a generator that concatenated them. It was removed: this repository
+serves one machine, that machine installs all of them, so the split cost a
+generator, a committed build artifact, a CI freshness gate and three install
+tasks to express a distinction nothing acted on. `personal` held two packages.
 
-| Profile | Contents |
-|---|---|
-| `base` | The baseline every machine gets. Generated into the root `Brewfile`. |
-| `work` | Local service stack, company apps, CI clients. |
-| `personal` | Media, browsers, everything unrelated to work. |
-| `experimental` | Tried once, kept just in case. Candidates for deletion. |
-
-`mise` is only a task runner here — those install tasks shell out to
-`brew bundle`. It never installs a Homebrew package itself.
+The `Experimental` section survives as a section, because its value was never
+installation — it is a named place for "not sure I still need this", which
+makes removal a decision rather than inertia.
 
 ## Doctor
 
@@ -106,14 +91,13 @@ mise run install:personal   # base + personal
 mise run doctor
 ```
 
-Read-only. Answers whether this Mac is actually the machine the profiles
-describe:
+Read-only. Answers whether this Mac is actually the machine the Brewfile
+describes:
 
 - packages installed but declared in no profile, and the reverse
 - any tool claimed by both Homebrew and mise, with the versions and which
   one wins on `PATH`
 - running Homebrew services, flagged if undeclared
-- a root `Brewfile` that no longer matches `profiles/`
 - packages Homebrew has deprecated or disabled
 
 Exits non-zero on a real problem; drift is reported as a warning.
@@ -154,9 +138,9 @@ chezmoi init --apply Sbastien
 
 ## Making it yours
 
-The `work` and `personal` profiles are mine — my employer's service stack, my
-music app. Nothing in them is meant to be a recommendation. `base`, `bin/` and
-the CI are the reusable parts.
+The package list is mine — my employer's service stack, my music app. Nothing
+in it is meant to be a recommendation. `bin/` and the CI are the reusable
+parts.
 
 1. Fork it, or click **Use this template** (keep the repo name `Brewfile`)
 
@@ -173,7 +157,7 @@ the CI are the reusable parts.
      -e "s/sbastien/$(echo "$YOUR_USERNAME" | tr '[:upper:]' '[:lower:]')/g"
    ```
 
-3. Edit `profiles/*.Brewfile` to add/remove packages, then run `mise run generate`
+3. Edit the `Brewfile` to add or remove packages
 
 <br>
 

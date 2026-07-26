@@ -36,42 +36,37 @@ Before adding a tool, answer: **do I want to pin this version?**
 ## Layout
 
 ```
-profiles/
-  base.Brewfile          the baseline every machine gets
-  work.Brewfile          service stack, company apps
-  personal.Brewfile      media, browsers, non-work
-  experimental.Brewfile  kept just in case; deletion candidates
-
-Brewfile                 GENERATED from base. Do not edit.
-bin/generate             profiles/ -> Brewfile
+Brewfile                 the whole environment, one file, commented sections
 bin/validate             syntax, duplicates, conventions
-bin/doctor               audits the machine against the profiles
+bin/doctor               audits the machine against the Brewfile
 bin/check-deprecated     upstream deprecation, one JSON query
 mise.toml                pinned repo tooling + task definitions
+test/                    bats suite
 ```
+
+There were four profiles and a generator once. Removed: one machine installed
+all of them, so the split bought nothing and cost a build artifact, a CI
+freshness gate and three install tasks. If a second machine ever needs a
+different subset, that is the moment to bring it back — not before.
 
 ## Commands
 
 ```bash
-mise run generate     # rebuild the root Brewfile after editing a profile
-mise run validate     # generation freshness + root Brewfile + every profile
+mise run validate     # syntax, duplicates, conventions
 mise run doctor       # audit this machine (read-only)
+mise run test         # bats suite
 mise run lint         # shellcheck + shfmt
 mise run fmt          # shfmt in place
-mise run install      # base only
-mise run install:work # base + work
+mise run install      # brew bundle
 ```
 
-`mise` is a task runner here as well as a version manager. The install tasks
-shell out to `brew bundle`; mise never installs a Homebrew package.
+`mise` is a task runner here as well as a version manager. `mise run install`
+shells out to `brew bundle`; mise never installs a Homebrew package.
 
 Note the tooling in `mise.toml` is scoped to this directory. Outside it,
 `shellcheck` and `shfmt` are not on `PATH` unless also installed globally.
 
 ## Conventions
-
-**Never edit the root `Brewfile`.** It is generated. `bin/generate --check`
-runs in CI and will fail the build. Edit a profile, then `mise run generate`.
 
 **Every package carries a description** as a trailing comment, aligned at
 column 29 where the name is short enough — the four Nerd Font casks are longer
@@ -115,11 +110,10 @@ with a comment saying why.
 ## Before committing
 
 ```bash
-mise run lint && mise run validate
+mise run lint && mise run validate && mise run test
 ```
 
-CI runs the same scripts, so a green local run means a green CI run. If you
-touched a profile, `mise run generate` first or CI will reject the diff.
+CI runs the same scripts, so a green local run means a green CI run.
 
 ## Things that look like bugs but are not
 

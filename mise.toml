@@ -18,49 +18,20 @@ shfmt = "3.13.1"
 # -----------------------------------------------------------------------------
 
 [tasks.install]
-description = "Install the base profile"
-run = "brew bundle --file=profiles/base.Brewfile"
-
-[tasks."install:work"]
-description = "Install base + work"
-run = [
-    "brew bundle --file=profiles/base.Brewfile",
-    "brew bundle --file=profiles/work.Brewfile",
-]
-
-[tasks."install:personal"]
-description = "Install base + personal"
-run = [
-    "brew bundle --file=profiles/base.Brewfile",
-    "brew bundle --file=profiles/personal.Brewfile",
-]
-
-[tasks."install:experimental"]
-description = "Install base + experimental"
-run = [
-    "brew bundle --file=profiles/base.Brewfile",
-    "brew bundle --file=profiles/experimental.Brewfile",
-]
+description = "Install everything in the Brewfile"
+run = "brew bundle --file=Brewfile"
 
 # -----------------------------------------------------------------------------
 # Repository maintenance
 # -----------------------------------------------------------------------------
 
 [tasks.doctor]
-description = "Audit this machine against the profiles (read-only)"
+description = "Audit this machine against the Brewfile (read-only)"
 run = "./bin/doctor"
 
-[tasks.generate]
-description = "Regenerate the root Brewfile from profiles/"
-run = "./bin/generate"
-
 [tasks.validate]
-description = "Check the root Brewfile is current, then validate it and every profile"
-run = [
-    "./bin/generate --check",
-    "./bin/validate Brewfile",
-    "for p in profiles/*.Brewfile; do ./bin/validate \"$p\"; done",
-]
+description = "Validate the Brewfile: syntax, duplicates, conventions"
+run = "./bin/validate Brewfile"
 
 [tasks."check:deprecated"]
 description = "Report Brewfile packages Homebrew has deprecated or disabled"

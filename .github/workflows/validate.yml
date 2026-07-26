@@ -6,16 +6,12 @@ on:
     # Duplicated below on purpose: GitHub Actions does not support YAML anchors.
     paths:
       - 'Brewfile'
-      - 'profiles/**'
       - 'bin/validate'
-      - 'bin/generate'
       - '.github/workflows/validate.yml'
   pull_request:
     paths:
       - 'Brewfile'
-      - 'profiles/**'
       - 'bin/validate'
-      - 'bin/generate'
       - '.github/workflows/validate.yml'
   workflow_dispatch:
 
@@ -27,19 +23,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      # The root Brewfile is generated from profiles/. This fails if someone
-      # edited it by hand or changed a profile without regenerating.
-      - name: Check the generated Brewfile is current
-        run: ./bin/generate --check
-
-      # Same scripts as `mise run validate`, so a green CI run means the same
+      # Same script as `mise run validate`, so a green CI run means the same
       # checks that pass locally. The previous workflow ended its syntax step
       # with `|| true` and was green regardless of outcome.
-      - name: Validate the root Brewfile
+      - name: Validate
         run: ./bin/validate Brewfile
-
-      - name: Validate each profile
-        run: |
-          for profile in profiles/*.Brewfile; do
-            ./bin/validate "$profile"
-          done

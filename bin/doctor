@@ -3,8 +3,8 @@
 # Audit this machine against what the repository declares.
 #
 # Answers the question the repository could not answer before: is this Mac
-# actually the machine these profiles describe? Reports drift, tools claimed
-# by two managers at once, running services, and a stale generated Brewfile.
+# actually the machine the Brewfile describes? Reports drift, tools claimed by
+# two managers at once, and running services that nothing declares.
 #
 # Read-only. Nothing here installs, uninstalls or modifies anything.
 #
@@ -12,7 +12,7 @@
 
 set -uo pipefail
 
-readonly PROFILE_GLOB="profiles/*.Brewfile"
+readonly BREWFILE="Brewfile"
 
 problems=0
 warnings=0
@@ -63,29 +63,12 @@ check_tooling() {
     fi
 }
 
-check_generated() {
-    section "Generated Brewfile"
-
-    if [[ ! -x bin/generate ]]; then
-        warn "bin/generate not found, skipping"
-        return
-    fi
-
-    if bin/generate --check >/dev/null 2>&1; then
-        ok "Brewfile matches profiles/"
-    else
-        bad "Brewfile is out of date — run: mise run generate"
-    fi
-}
-
-# Everything any profile declares
+# Everything the Brewfile declares
 declared_packages() {
-    local file
-    for file in $PROFILE_GLOB; do
-        [[ -f "$file" ]] || continue
-        brew bundle list --formula --file="$file" 2>/dev/null
-        brew bundle list --cask --file="$file" 2>/dev/null
-    done | sort -u
+    {
+        brew bundle list --formula --file="$BREWFILE" 2>/dev/null
+        brew bundle list --cask --file="$BREWFILE" 2>/dev/null
+    } | sort -u
 }
 
 check_drift() {
@@ -114,10 +97,10 @@ check_drift() {
     missing=$(comm -13 <(printf '%s\n' "$present") <(printf '%s\n' "$declared") | tr '\n' ' ')
 
     if [[ -n "${extra// /}" ]]; then
-        warn "installed but declared in no profile:"
+        warn "installed but not in the Brewfile:"
         wrap "$extra"
     else
-        ok "nothing installed outside the profiles"
+        ok "nothing installed outside the Brewfile"
     fi
 
     if [[ -n "${missing// /}" ]]; then
@@ -197,7 +180,7 @@ check_services() {
         if printf '%s\n' "$declared" | grep -qx "$svc"; then
             ok "$svc running (declared)"
         else
-            warn "$svc running but declared in no profile"
+            warn "$svc running but not declared"
         fi
     done <<<"$running"
 }
@@ -225,10 +208,9 @@ check_deprecated() {
 
 # -----------------------------------------------------------------------------
 
-printf '\n\033[1mBrewfile doctor\033[0m — auditing this machine against the profiles\n'
+printf '\n\033[1mBrewfile doctor\033[0m — auditing this machine against the Brewfile\n'
 
 check_tooling
-check_generated
 check_drift
 check_manager_overlap
 check_services
@@ -236,7 +218,7 @@ check_deprecated
 
 section "Summary"
 if ((problems == 0 && warnings == 0)); then
-    ok "machine matches the profiles"
+    ok "machine matches the Brewfile"
 elif ((problems == 0)); then
     printf '  %s warning(s), nothing broken\n' "$warnings"
 else
