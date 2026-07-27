@@ -64,8 +64,8 @@ trap 'rm -f "$brewfile"' EXIT
 curl -fsSL "$BREWFILE_URL" -o "$brewfile" || die "Failed to download $BREWFILE_URL"
 [[ -s "$brewfile" ]] || die "The downloaded Brewfile is empty."
 
-# `install` is the default subcommand, but brew bundle has ten of them now and
-# naming the one you mean costs nothing. It upgrades what is already there.
+# `install` is the default subcommand, but brew bundle has a fistful of them
+# and naming the one you mean costs nothing. It upgrades what is already there.
 brew bundle install --file="$brewfile" || die "Some packages failed to install."
 
 printf '\n  🍺 Your dev environment is ready.\n\n'

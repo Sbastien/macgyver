@@ -30,11 +30,12 @@
 
 ```bash
 git clone https://github.com/Sbastien/Brewfile && cd Brewfile
-mise run install
+brew bundle
 ```
 
 Clone rather than curl: it is what gives you `mise run doctor` and the rest of
-the tasks.
+the tasks. And `brew bundle` rather than `mise run install`, because mise is
+one of the things this file is about to install.
 
 <details>
 <summary>One-liner, for a fresh Mac with no clone</summary>
@@ -61,7 +62,7 @@ curl -fsSL https://raw.githubusercontent.com/Sbastien/Brewfile/main/Brewfile | b
 
 ## What's in here
 
-`Brewfile` is the environment: 109 packages in one file, grouped into
+`Brewfile` is the environment: every package in one file, grouped into
 commented sections, one description each. Around it, two scripts and the
 config to lint them.
 
@@ -119,15 +120,20 @@ mise run doctor
 Read-only. It answers one question: is this Mac still the machine the Brewfile
 describes?
 
-- declared but not installed, via `brew bundle check`
+- declared but not installed, via `brew bundle check` — including a declared
+  service that is not running
 - installed but not declared, via `brew bundle cleanup` — formulae, casks and
   third-party taps in one pass
 - any tool claimed by both Homebrew and mise, with versions and which one wins
 
-The first two are Homebrew's own answers, printed as it gives them. The third
-is the only part this repository has to compute, and it is the only one that
+The first two are Homebrew's own answers, printed as it gives them: a diff in
+opposite directions, never applied here — `brew bundle install` applies one,
+`brew bundle cleanup --force` the other.
+
+The third is the only part this repository computes, and the only one that
 exits non-zero: drift is a decision waiting to be made, two managers owning
-one tool is a bug.
+one tool is a bug. It is also not a diff. Nothing in the Brewfile mentions
+mise, so a file that matches the machine perfectly can still fail it.
 
 ## Keeping the list current
 
@@ -136,8 +142,10 @@ brew bundle add ripgrep     # or just edit the Brewfile
 mise run doctor             # what drifted since last time
 ```
 
-`brew bundle add` writes the line but not the description comment. Write it
-yourself — a bare list of 109 package names is not something anyone rereads.
+`brew bundle add` now writes a description of its own, above the line, taken
+from Homebrew's catalogue. Move it to the end of the line and rewrite it to
+say why *you* declared the thing — a bare catalogue blurb is not something
+anyone rereads.
 
 ## The installer does not hide Homebrew
 
@@ -175,7 +183,12 @@ a recommendation. The two scripts and the CI are the reusable parts.
 ## Then: dotfiles
 
 This repository installs the tools. My
-[dotfiles](https://github.com/Sbastien/dotfiles) configure them.
+[dotfiles](https://github.com/Sbastien/dotfiles) configure them. If it is a
+package name it lives here; if it is a file in `$HOME` it lives there — which
+is why there is not a single `defaults write` in this repository.
+
+`chezmoi` is a Homebrew formula, so it cannot install itself. This repository
+bootstraps the other one, never the reverse.
 
 ```bash
 chezmoi init --apply Sbastien

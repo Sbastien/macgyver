@@ -80,7 +80,7 @@ brew "trivy"                # Container scanner
 # Other CLIs stay with Homebrew even where a project might want to pin them.
 # A mise tool is only on PATH once mise activates, and the global mise config
 # is not version-controlled today — moving a tool there would trade a tracked
-# declaration for an untracked one. See "Tools managed by mise" in the README.
+# declaration for an untracked one. See "Homebrew or mise?" in the README.
 brew "mise"                 # Polyglot runtime manager (bootstraps the rest)
 brew "direnv"               # Per-directory env vars
 brew "watchman"             # File watcher
@@ -141,11 +141,15 @@ cask "font-meslo-lg-nerd-font"        # Meslo + icons
 # Servers stay with Homebrew rather than mise: they run as launchd services
 # via `brew services`, and one global instance is the intent. Pin a different
 # version with mise inside a project only when that project actually needs it.
-brew "postgresql@16"        # PostgreSQL server (brew services start postgresql@16)
-brew "redis"                # In-memory data store (brew services start redis)
+#
+# The ones that run permanently say so. `restart_service: :changed` starts
+# them on a fresh Mac, and lets `brew bundle check` notice one that died.
 brew "meilisearch"          # Search engine
 brew "mailpit"              # Captures outgoing mail in development
-brew "caddy"                # Reverse proxy for local worktrees
+
+brew "postgresql@16", restart_service: :changed  # PostgreSQL server
+brew "redis", restart_service: :changed          # In-memory data store
+brew "caddy", restart_service: :changed          # Reverse proxy for local worktrees
 
 # Work Tooling
 brew "worktrunk"            # Git worktree manager
@@ -168,9 +172,9 @@ cask "vivaldi"              # Browser
 # Document Toolchain (experimental)
 # "experimental" in a section title means: kept just in case, or tried once
 # and never removed. It sits in the title rather than in a heading of its own
-# so that it survives into the website, and so the rest of the file stays
-# honest — anything carrying the marker is a candidate for deletion at the
-# next review rather than something to carry forever.
+# so the rest of the file stays honest — anything carrying the marker is a
+# candidate for deletion at the next review rather than something to carry
+# forever.
 #
 # All five are standalone: `brew uses --installed` reports nothing depending
 # on any of them, so they were installed deliberately rather than pulled in.

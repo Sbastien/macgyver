@@ -7,13 +7,21 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Nothing here writes to the repository, and this file travels to anyone who
+# uses the template button.
+permissions:
+  contents: read
+
 jobs:
-  # One job on macOS. Linting alone would run on Linux, but parsing a Brewfile
-  # needs Homebrew, so the expensive runner is already required — splitting the
-  # lint onto ubuntu would buy a few seconds and cost a second job to read.
+  # One job on macOS. Linting alone would run on Linux, but resolving a
+  # Brewfile needs Homebrew, so the expensive runner is already required —
+  # splitting the lint onto ubuntu would buy a few seconds and cost a second
+  # job to read. macOS runners are free on public repositories.
   check:
-    name: Lint and parse
+    name: Lint and check
     runs-on: macos-latest
+    # The check calls Homebrew's API; the default timeout is six hours.
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -23,12 +31,11 @@ jobs:
       - name: Setup mise
         uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14  # v4.2.3
 
+      # One task, defined in mise.toml, so "this is what CI runs" is a fact
+      # rather than two command lines kept in step by hand.
+      #
       # install.sh is linted, not executed. It used to carry a --dry-run mode
-      # for CI to run end to end; that mode was a third of the script, existed
-      # only to be tested, and went when the script came down to eighty lines.
-      # The trade is real: a typo in a variable name would ship.
-      - name: Lint
-        run: mise run lint
-
-      - name: Parse the Brewfile
-        run: brew bundle list --all --file=Brewfile
+      # for CI to run end to end; that mode was a third of the script and
+      # existed only to be tested. The trade is real: the flow is untested.
+      - name: Lint and check
+        run: mise run ci

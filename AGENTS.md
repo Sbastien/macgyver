@@ -39,10 +39,27 @@ Brewfile was right. Homebrew flags these `auto_updates true` and skips them on
 `brew upgrade` unless you pass `--greedy`, so declaring one costs nothing and
 is the only thing that puts it on a fresh Mac.
 
-Declare nowhere only when Homebrew has no formula or cask at all. There is one
-such tool: Claude Code, the CLI, installed by Anthropic's script into
-`~/.local/bin`. Not to be confused with `cask "claude"`, the desktop app,
-which is declared like everything else.
+**One tool is declared nowhere: Claude Code, the CLI.** Anthropic's own script
+puts it in `~/.local/bin`. Homebrew does ship `cask "claude-code"`, but it is
+not flagged `auto_updates` and Claude Code rewrites its own binary, so
+`brew upgrade` and the tool's updater would share one file — the two-managers
+problem again. `cask "claude"` is the desktop app, and is declared like
+everything else.
+
+## Two repositories, one machine
+
+| Repository | Owns |
+|---|---|
+| **Brewfile** (this one) | what gets *installed*: formulae, casks, launchd services |
+| **dotfiles** (chezmoi) | what gets *configured*: shell, git, editor config, `defaults write`, `~/.config` |
+
+If it is a package name it belongs here. If it is a file in `$HOME` it belongs
+there. That is why this repository contains no `defaults write`.
+
+The dependency runs one way: `chezmoi` is a Homebrew formula, so it cannot
+install itself, and `install.sh` ends by handing off to it. Never the reverse.
+The other repository calls `bin/doctor` by absolute path, which is why that
+script finds the Brewfile next to itself rather than in `$PWD`.
 
 ## Layout
 
@@ -62,6 +79,8 @@ different subset, that is the moment to bring it back — not before.
 
 ```bash
 mise run doctor       # audit this machine (read-only)
+mise run ci           # what CI runs: lint + check
+mise run check        # parse the Brewfile, resolve every name upstream
 mise run lint         # shellcheck + shfmt
 mise run fmt          # shfmt in place
 mise run install      # brew bundle
@@ -147,10 +166,10 @@ reason to be held to 3.2.
 ## Before committing
 
 ```bash
-mise run lint && brew bundle list --all --file=Brewfile
+mise run ci
 ```
 
-That is exactly what CI runs, so a green local run means a green CI run.
+`ci.yml` runs the same task, so a green local run means a green CI run.
 
 **CI does not execute `install.sh`.** It is linted, not run. The `--dry-run`
 mode that used to let CI exercise it end to end was a third of the script and
@@ -163,16 +182,18 @@ bug in the rewrite was found.
 - `bash`, `gnupg`, `sqlite` and `tmux` are declared but absent from
   `brew leaves`. They are installed — other packages depend on them. This is
   why `bin/doctor` compares mise against `brew leaves` and not `brew list`.
-- Homebrew's `python@3.14` is installed but not declared. It is keg-only and
-  pulled in by seven packages; it is not a tool anyone chose.
-- `brew bundle check` reports a declared package as "needs to be installed or
-  updated" when it is installed at an older version. That is correct — `brew
-  bundle install` would upgrade it — but it reads like it is missing.
+- Homebrew's `python@3.14` is installed but not declared. Seven declared
+  packages depend on it, so it cannot be un-chosen. It is linked and owns
+  `/opt/homebrew/bin/python3`, which makes it look like an overlap with mise's
+  python — it is not one, nothing declares it twice.
 - `brew bundle check` says nothing about tap trust. Only `brew bundle install`
   surfaces that.
 - `brew bundle cleanup` exits 0 whether or not it finds anything, so its
   output has to be read rather than its status. Without `--force` it only
-  reports; `bin/doctor` never passes `--force`.
+  reports; `bin/doctor` never passes `--force`. Read the verbs: the output
+  also lists cache files, which have nothing to do with drift.
+- `bin/doctor` passes `--no-upgrade` to `brew bundle check`. Without it, a
+  package one bottle behind reads as missing.
 
 ## Known gaps
 
@@ -180,9 +201,12 @@ bug in the rewrite was found.
   are declared nowhere version-controlled. This is why linters have not been
   moved out of the Brewfile wholesale — the destination is less tracked than
   the source. Fixing it belongs in the dotfiles repository.
-- Claude Code, the CLI, is installed by Anthropic's own script into
-  `~/.local/bin` and declared nowhere. Deliberate: Homebrew has no formula for
-  it, so there is nothing to declare. `cask "claude"` is the desktop app.
 - There is no GitHub Pages site. `brew bundle`'s output and this README are
   both better read where they already are. A Pages site rendering this file
-  printed its title twice — once from the theme, once from the file.
+  printed its title twice — once from the theme, once from the file. Deleting
+  it left GitHub's own `pages-build-deployment` workflow failing 404 for one
+  commit; disabling Pages in the repository settings stops that, and there is
+  nothing to fix in this tree.
+- CI resolves every declared name, but cannot tell that a name is no longer
+  the current one. A renamed cask (`docker` became `docker-desktop`) keeps
+  resolving for as long as the alias lives.

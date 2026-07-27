@@ -6,6 +6,3 @@
 
 .DS_Store
 .claude/
-
-# Written by hand-run scripts
-*.log

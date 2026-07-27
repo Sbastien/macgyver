@@ -18,7 +18,7 @@ shfmt = "3.13.1"
 
 [tasks.install]
 description = "Install everything in the Brewfile"
-# `install` is the default subcommand, but brew bundle has nine of them now
+# `install` is the default subcommand, but brew bundle has a fistful of them
 # and naming the one you mean costs nothing.
 run = "brew bundle install --file=Brewfile"
 
@@ -40,3 +40,19 @@ run = [
 [tasks.fmt]
 description = "Format shell scripts in place"
 run = "shfmt -i 4 -ci -w bin/doctor install.sh"
+
+# A parse accepts `brew "ripgrp"` and exits 0, so a typo would first surface
+# on a bare Mac. Asking Homebrew to resolve every name costs two seconds.
+# It will not catch a rename: `cask "docker"` still resolves years on.
+[tasks.check]
+description = "Parse the Brewfile and resolve every package against Homebrew"
+run = [
+    "brew bundle list --all --file=Brewfile >/dev/null",
+    "brew bundle list --formulae --file=Brewfile | xargs brew info --formula --json=v2 >/dev/null",
+    "brew bundle list --casks --file=Brewfile | xargs brew info --cask --json=v2 >/dev/null",
+]
+
+# One name for the whole gate, so ci.yml cannot drift from the local run.
+[tasks.ci]
+description = "Everything CI runs"
+depends = ["lint", "check"]
