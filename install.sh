@@ -9,7 +9,16 @@ set -euo pipefail
 #
 # It orchestrates; it does not wrap. Homebrew, curl and chezmoi run in the
 # foreground with their own output, their own prompts and their own exit
-# codes. See "The installer orchestrates" in AGENTS.md.
+# codes. No spinner over them, no log to redirect into, no `-q`, no
+# NONINTERACTIVE=1. Every flag layered over someone else's tool is a guess
+# about how that tool behaves, and the guess rots: a new warning or caveat
+# upstream simply stops being shown. Before adding one, ask what it hides on
+# the day the tool changes.
+#
+# bash and not zsh, here and in bin/doctor: shellcheck has no zsh dialect —
+# `shellcheck -s zsh` answers `Unknown shell: zsh` — so writing these in zsh
+# would delete the only static analysis they get, in exchange for nothing a
+# non-interactive script uses.
 #
 # `#!/bin/bash` rather than `/usr/bin/env bash` on purpose. On a Mac that has
 # never seen Homebrew, /bin/bash 3.2 is the only bash there is, so this script
