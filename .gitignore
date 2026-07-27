@@ -1,8 +1,6 @@
-# This repository has no build, no dependencies to vendor and no generated
-# artifacts, so this file only needs to cover what actually turns up in the
-# working tree. The usual boilerplate — .idea/, tmp/, *.cache, .env — was
-# removed rather than kept "just in case": an ignore rule for a file that
-# cannot occur is a claim about the project that is not true.
+# No build, no vendored dependencies, no generated artifacts — so this covers
+# only what actually turns up in the working tree. An ignore rule for a file
+# that cannot occur is a claim about the project that is not true.
 
 .DS_Store
 .claude/

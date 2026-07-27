@@ -8,11 +8,8 @@ set -euo pipefail
 # Bootstraps a fresh Mac: Homebrew if it is missing, then the package list.
 #
 # It orchestrates; it does not wrap. Homebrew, curl and chezmoi run in the
-# foreground with their own output, their own prompts and their own exit codes.
-# Nothing is redirected to a log, nothing hides behind a spinner, no `-q` is
-# added. Every flag layered over someone else's tool is a guess about how that
-# tool behaves, and the guess rots: a new warning or caveat upstream simply
-# stops being shown.
+# foreground with their own output, their own prompts and their own exit
+# codes. See "The installer orchestrates" in AGENTS.md.
 #
 # `#!/bin/bash` rather than `/usr/bin/env bash` on purpose. On a Mac that has
 # never seen Homebrew, /bin/bash 3.2 is the only bash there is, so this script

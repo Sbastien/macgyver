@@ -74,8 +74,7 @@ brew "trivy"                # Container scanner
 # ~/.config/mise/config.toml.
 #
 # shellcheck and shfmt are absent on purpose: this repository pins them in its
-# own mise.toml, so installing them here too meant two copies of each, with
-# Homebrew's winning on PATH. That file is tracked, so nothing is lost.
+# own mise.toml, which is tracked.
 #
 # Other CLIs stay with Homebrew even where a project might want to pin them.
 # A mise tool is only on PATH once mise activates, and the global mise config

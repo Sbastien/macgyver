@@ -31,20 +31,16 @@ Before adding a tool, answer: **do I want to pin this version?**
 
 "Can mise install it?" is not the question. mise can install almost anything.
 
-**A tool that updates itself still goes in Homebrew.** This used to read as a
-third branch — "it self-updates, so declare it nowhere" — and the Brewfile
-contradicted it on eight lines: chrome, firefox, vivaldi, docker-desktop,
-vscode, slack, notion and figma all self-update and are all declared. The
-Brewfile was right. Homebrew flags these `auto_updates true` and skips them on
-`brew upgrade` unless you pass `--greedy`, so declaring one costs nothing and
-is the only thing that puts it on a fresh Mac.
+**A tool that updates itself still goes in Homebrew.** Homebrew flags these
+`auto_updates true` and skips them on `brew upgrade` unless you pass
+`--greedy`, so declaring one costs nothing and is the only thing that puts it
+on a fresh Mac.
 
-**One tool is declared nowhere: Claude Code, the CLI.** Anthropic's own script
-puts it in `~/.local/bin`. Homebrew does ship `cask "claude-code"`, but it is
-not flagged `auto_updates` and Claude Code rewrites its own binary, so
-`brew upgrade` and the tool's updater would share one file — the two-managers
-problem again. `cask "claude"` is the desktop app, and is declared like
-everything else.
+**One tool is declared nowhere: Claude Code, the CLI**, which Anthropic's own
+script puts in `~/.local/bin`. `cask "claude-code"` exists but is not flagged
+`auto_updates`, and Claude Code rewrites its own binary — declaring it would
+put `brew upgrade` and the tool's updater on one file. `cask "claude"` is the
+desktop app and is declared like everything else.
 
 ## Two repositories, one machine
 
@@ -54,12 +50,12 @@ everything else.
 | **dotfiles** (chezmoi) | what gets *configured*: shell, git, editor config, `defaults write`, `~/.config` |
 
 If it is a package name it belongs here. If it is a file in `$HOME` it belongs
-there. That is why this repository contains no `defaults write`.
+there.
 
-The dependency runs one way: `chezmoi` is a Homebrew formula, so it cannot
-install itself, and `install.sh` ends by handing off to it. Never the reverse.
-The other repository calls `bin/doctor` by absolute path, which is why that
-script finds the Brewfile next to itself rather than in `$PWD`.
+`chezmoi` is a Homebrew formula, so it cannot install itself: `install.sh`
+ends by handing off to it, never the reverse. The dotfiles call `bin/doctor`
+by absolute path, which is why that script finds the Brewfile next to itself
+rather than in `$PWD`.
 
 ## Layout
 
@@ -70,10 +66,8 @@ install.sh               the one-liner installer, for a machine with no clone
 mise.toml                pinned repo tooling + task definitions
 ```
 
-There were four profiles and a generator once. Removed: one machine installed
-all of them, so the split bought nothing and cost a build artifact, a CI
-freshness gate and three install tasks. If a second machine ever needs a
-different subset, that is the moment to bring it back — not before.
+One file, no profiles. Split it only when a second machine actually needs a
+different subset.
 
 ## Commands
 
@@ -106,21 +100,15 @@ Nothing enforces this. Descriptions are for whoever reads the file, and the
 only reader is a human — so a missing one is a gap in the prose, not a build
 failure.
 
-There used to be `@icon:` annotations here too, one per section, and a
-`bin/validate` that checked them against a table in `docs/index.html`. They
-existed for the website, and they went with it. The conventions that remain
-are the ones a reader benefits from; a convention whose only consumer is a
-program should live in the program.
+A convention whose only consumer is a program should live in the program, not
+here.
 
 **Experimental packages are marked in the section title**, not in a heading of
-their own:
+their own — a heading reads as a title for everything below it:
 
 ```ruby
 # Misc (experimental)
 ```
-
-A heading above the sections looked tidier, but it read as a title for
-everything below it. The marker belongs on the section it describes.
 
 **Third-party taps require explicit trust.** Homebrew 6 refuses to load
 formulae and casks from non-official taps, which aborts `brew bundle` on a
@@ -133,22 +121,19 @@ cask "someone/tap/thing", trusted: true
 
 Prefer having no third-party tap at all. There are currently none.
 
-**No global Gatekeeper bypass.** `cask_args quarantine: false` was removed; it
-is what let a cask that fails the Gatekeeper check install silently. A cask
-that genuinely needs it carries `args: { quarantine: false }` on its own line,
-with a comment saying why.
+**No global Gatekeeper bypass.** A global `cask_args quarantine: false` lets a
+cask that fails the Gatekeeper check install silently. A cask that genuinely
+needs it carries `args: { quarantine: false }` on its own line, with a comment
+saying why.
 
-**The installer orchestrates, it does not wrap.** `install.sh` runs
-Homebrew, curl and chezmoi in the foreground, with their output, their prompts
-and their exit codes intact. No spinner over them, no redirection to a log, no
-`-q`, no `NONINTERACTIVE=1`, and no clearing of the user's screen.
+**The installer orchestrates, it does not wrap.** `install.sh` runs Homebrew,
+curl and chezmoi in the foreground, with their output, their prompts and their
+exit codes intact. No spinner over them, no redirection to a log, no `-q`, no
+`NONINTERACTIVE=1`, and no clearing of the user's screen.
 
 Every flag layered over another tool is a guess about how that tool behaves,
 and the guess rots silently — a new warning or caveat upstream simply stops
 being shown. Before adding one, ask what it hides on the day the tool changes.
-
-The same reasoning retires steps. There is no `brew cleanup` prompt because
-Homebrew already cleans up after every install, and fully every 30 days.
 
 **The scripts are bash, and the two shebangs differ on purpose.** Not zsh:
 shellcheck has no zsh dialect at all — `shellcheck -s zsh` answers `Unknown
@@ -171,11 +156,9 @@ mise run ci
 
 `ci.yml` runs the same task, so a green local run means a green CI run.
 
-**CI does not execute `install.sh`.** It is linted, not run. The `--dry-run`
-mode that used to let CI exercise it end to end was a third of the script and
-existed only to be tested. Change the installer and you test it by hand — a
-stub for `brew bundle` and `chezmoi`, then run it. That is how the `/dev/tty`
-bug in the rewrite was found.
+**CI does not execute `install.sh`.** It is linted, not run. Change the
+installer and you test it by hand: a stub for `brew bundle` and `chezmoi` on
+`PATH`, then run it. Nothing else exercises its control flow.
 
 ## Things that look like bugs but are not
 
@@ -201,12 +184,9 @@ bug in the rewrite was found.
   are declared nowhere version-controlled. This is why linters have not been
   moved out of the Brewfile wholesale — the destination is less tracked than
   the source. Fixing it belongs in the dotfiles repository.
-- There is no GitHub Pages site. `brew bundle`'s output and this README are
-  both better read where they already are. A Pages site rendering this file
-  printed its title twice — once from the theme, once from the file. Deleting
-  it left GitHub's own `pages-build-deployment` workflow failing 404 for one
-  commit; disabling Pages in the repository settings stops that, and there is
-  nothing to fix in this tree.
 - CI resolves every declared name, but cannot tell that a name is no longer
   the current one. A renamed cask (`docker` became `docker-desktop`) keeps
   resolving for as long as the alias lives.
+- VS Code extensions are declared nowhere. Settings Sync owns them; a second
+  declaration here would be the two-managers problem again. Signing into the
+  account is the one manual step on a fresh Mac.

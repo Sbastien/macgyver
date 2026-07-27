@@ -63,8 +63,8 @@ check_undeclared() {
     # casks and third-party taps together. It exits 0 whether or not it finds
     # anything, so the output is what has to be read.
     # Match the verbs, not a bare `^Would `: the output also carries a cache
-    # section that any warm machine has, which made the green branch
-    # unreachable. Those lines are dropped from the report too.
+    # section that any warm machine has. Those lines are dropped from the
+    # report too.
     local drift
     drift=$(brew bundle cleanup --file="$BREWFILE" 2>&1)
 

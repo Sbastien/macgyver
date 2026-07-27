@@ -33,9 +33,6 @@ jobs:
 
       # One task, defined in mise.toml, so "this is what CI runs" is a fact
       # rather than two command lines kept in step by hand.
-      #
-      # install.sh is linted, not executed. It used to carry a --dry-run mode
-      # for CI to run end to end; that mode was a third of the script and
-      # existed only to be tested. The trade is real: the flow is untested.
+      # install.sh is linted, not executed: nothing exercises its control flow.
       - name: Lint and check
         run: mise run ci
