@@ -1,46 +1,41 @@
 # AGENTS.md
 
-Working notes for this repository, for humans and for AI agents alike.
+A declarative description of one macOS development environment. Homebrew does
+the work; everything here exists to keep the declaration accurate.
 
-## What this repository is
+**The regression test:** if a change makes this repository describe the machine
+*less* accurately, it is a regression, however convenient it looks.
 
-A declarative description of a macOS development environment. It installs
-nothing clever: Homebrew does the work, and everything here exists to make the
-declaration accurate, reviewable and reproducible.
-
-If a change makes the repository describe the machine *less* accurately, it is
-a regression regardless of how convenient it looks.
-
-## The one rule that matters
+## The one rule
 
 **Homebrew and mise never manage the same tool.**
 
 | Manager | Owns |
 |---|---|
-| **Homebrew** | Anything needed before mise exists (git, curl, zsh, mise itself), GUI applications, launchd services, system libraries, and daily-driver CLIs no project pins |
-| **mise** | Language runtimes, and any CLI whose exact version a project and its CI must agree on |
+| **Homebrew** | anything needed before mise exists (git, curl, zsh, mise itself), GUI applications, launchd services, system libraries, daily-driver CLIs no project pins |
+| **mise** | language runtimes, and any CLI whose exact version a project and its CI must agree on |
 
-Two managers for one tool means two installed copies and one silently shadowing
+Two managers for one tool means two copies on disk and one silently shadowing
 the other on `PATH`. That was the state of `postgres`, `redis` and `shellcheck`
 before this was written down.
 
 Before adding a tool, answer: **do I want to pin this version?**
 
-- Yes, and it depends on the project → mise
+- Yes, and a project depends on it → mise
 - No, I want it on every machine → Homebrew
 
 "Can mise install it?" is not the question. mise can install almost anything.
 
-**A tool that updates itself still goes in Homebrew.** Homebrew flags these
-`auto_updates true` and skips them on `brew upgrade` unless you pass
-`--greedy`, so declaring one costs nothing and is the only thing that puts it
-on a fresh Mac.
+Two consequences that look like exceptions and are not:
 
-**One tool is declared nowhere: Claude Code, the CLI**, which Anthropic's own
-script puts in `~/.local/bin`. `cask "claude-code"` exists but is not flagged
-`auto_updates`, and Claude Code rewrites its own binary — declaring it would
-put `brew upgrade` and the tool's updater on one file. `cask "claude"` is the
-desktop app and is declared like everything else.
+- **A tool that updates itself still goes in Homebrew.** Homebrew flags these
+  `auto_updates true` and skips them on `brew upgrade` unless you pass
+  `--greedy`. Declaring one costs nothing and is the only thing that puts it on
+  a fresh Mac.
+- **Claude Code, the CLI, is declared nowhere.** `cask "claude-code"` exists,
+  but is not flagged `auto_updates` while Claude Code rewrites its own binary —
+  declaring it would put `brew upgrade` and the tool's own updater on one file.
+  (`cask "claude"` is the desktop app, and is declared like everything else.)
 
 ## Two repositories, one machine
 
@@ -52,9 +47,9 @@ desktop app and is declared like everything else.
 If it is a package name it belongs here. If it is a file in `$HOME` it belongs
 there.
 
-`chezmoi` is a Homebrew formula, so it cannot install itself: `install.sh`
-ends by handing off to it, never the reverse. The dotfiles call `bin/doctor`
-by absolute path, which is why that script finds the Brewfile next to itself
+`chezmoi` is a Homebrew formula, so it cannot install itself: `install.sh` ends
+by handing off to it, never the reverse. The dotfiles call `bin/doctor` by
+absolute path, which is why that script finds the Brewfile next to itself
 rather than in `$PWD`.
 
 ## Layout
@@ -69,8 +64,6 @@ mise.toml                pinned repo tooling + task definitions
 One file, no profiles. Split it only when a second machine actually needs a
 different subset.
 
-## Commands
-
 ```bash
 mise run doctor       # audit this machine (read-only)
 mise run ci           # what CI runs: lint + check
@@ -81,27 +74,44 @@ mise run install      # brew bundle
 ```
 
 `mise` is a task runner here as well as a version manager. `mise run install`
-shells out to `brew bundle`; mise never installs a Homebrew package.
+shells out to `brew bundle`; mise never installs a Homebrew package. The
+tooling in `mise.toml` is scoped to this directory — outside it, `shellcheck`
+and `shfmt` are not on `PATH` unless also installed globally.
 
-Note the tooling in `mise.toml` is scoped to this directory. Outside it,
-`shellcheck` and `shfmt` are not on `PATH` unless also installed globally.
+## Common tasks
 
-## Conventions
+**Add a package.** Answer the pin question above first. Then put the line in
+the section it belongs to — not at the end of the file — and write the
+description yourself. `brew bundle add` writes one from Homebrew's catalogue,
+above the line; move it to the end of the line and say why *you* declared the
+thing. Finish with `mise run check`.
+
+**Add a server.** It goes in Local Services with `restart_service: :changed`,
+which starts it on a fresh Mac and lets `brew bundle check` report it when it
+dies. Declaring a server without the directive means a fresh Mac installs it
+and never runs it.
+
+**Remove a package.** Delete the line, then `brew uninstall` it by hand.
+Nothing here uninstalls anything: `bin/doctor` is read-only and
+`brew bundle cleanup` is never called with `--force`.
+
+**Answer a drift report.** `bin/doctor` listing something under "installed but
+not declared" is a question, not a failure — declare it or uninstall it. Do not
+leave it: a report that always has noise in it stops being read.
+
+## Editing the Brewfile
 
 **Every package carries a description** as a trailing comment, aligned at
-column 29 where the name is short enough — the four Nerd Font casks are longer
-than that and align among themselves instead:
+column 29 where the name is short enough. The four Nerd Font casks and the
+three service lines are longer than that and align among themselves instead:
 
 ```ruby
 brew "ripgrep"              # grep replacement
 ```
 
-Nothing enforces this. Descriptions are for whoever reads the file, and the
-only reader is a human — so a missing one is a gap in the prose, not a build
-failure.
-
-A convention whose only consumer is a program should live in the program, not
-here.
+Nothing enforces this. The only reader is a human, so a missing description is
+a gap in the prose, not a build failure — and a convention whose only consumer
+would be a program should live in the program, not here.
 
 **Experimental packages are marked in the section title**, not in a heading of
 their own — a heading reads as a title for everything below it:
@@ -109,6 +119,9 @@ their own — a heading reads as a title for everything below it:
 ```ruby
 # Misc (experimental)
 ```
+
+The marker means: kept just in case, or tried once and never removed. Anything
+carrying it is a candidate for deletion at the next review.
 
 **Third-party taps require explicit trust.** Homebrew 6 refuses to load
 formulae and casks from non-official taps, which aborts `brew bundle` on a
@@ -119,34 +132,34 @@ it in the file, scoped to one item:
 cask "someone/tap/thing", trusted: true
 ```
 
-Prefer having no third-party tap at all. There are currently none.
+Prefer having no third-party tap at all.
 
 **No global Gatekeeper bypass.** A global `cask_args quarantine: false` lets a
 cask that fails the Gatekeeper check install silently. A cask that genuinely
 needs it carries `args: { quarantine: false }` on its own line, with a comment
 saying why.
 
-**The installer orchestrates, it does not wrap.** `install.sh` runs Homebrew,
-curl and chezmoi in the foreground, with their output, their prompts and their
-exit codes intact. No spinner over them, no redirection to a log, no `-q`, no
-`NONINTERACTIVE=1`, and no clearing of the user's screen.
+## Editing the scripts
+
+**They are bash, not zsh.** shellcheck has no zsh dialect — `shellcheck -s zsh`
+answers `Unknown shell: zsh` — so writing them in zsh would delete the only
+static analysis they get, in exchange for nothing a non-interactive script
+uses. zsh is the interactive shell here; bash is the scripting one.
+
+**The two shebangs differ on purpose.** `install.sh` carries `#!/bin/bash`,
+Apple's bash 3.2: it runs before Homebrew exists, so 3.2 is the only bash it
+can count on, and pinning the shebang is what keeps an accidental `declare -A`
+or `mapfile` from slipping through on a dev machine. `bin/doctor` uses
+`#!/usr/bin/env bash` — it runs after the install.
+
+**`install.sh` orchestrates, it does not wrap.** Homebrew, curl and chezmoi run
+in the foreground with their output, their prompts and their exit codes intact.
+No spinner over them, no redirection to a log, no `-q`, no `NONINTERACTIVE=1`,
+no clearing of the user's screen.
 
 Every flag layered over another tool is a guess about how that tool behaves,
 and the guess rots silently — a new warning or caveat upstream simply stops
 being shown. Before adding one, ask what it hides on the day the tool changes.
-
-**The scripts are bash, and the two shebangs differ on purpose.** Not zsh:
-shellcheck has no zsh dialect at all — `shellcheck -s zsh` answers `Unknown
-shell: zsh` — so writing them in zsh would delete the only static analysis
-they get, in exchange for nothing a non-interactive script uses. zsh is the
-interactive shell here; bash is the scripting one.
-
-`install.sh` carries `#!/bin/bash`, which is Apple's bash 3.2. It runs before
-Homebrew exists, so 3.2 is the only bash it can count on, and pinning the
-shebang is what keeps that true — `#!/usr/bin/env bash` on a dev machine finds
-Homebrew's bash 5 and would hide an accidental `declare -A` or `mapfile`.
-`bin/doctor` uses `#!/usr/bin/env bash`: it runs after the install, and has no
-reason to be held to 3.2.
 
 ## Before committing
 
@@ -160,33 +173,34 @@ mise run ci
 installer and you test it by hand: a stub for `brew bundle` and `chezmoi` on
 `PATH`, then run it. Nothing else exercises its control flow.
 
-## Things that look like bugs but are not
+## Gotchas
 
 - `bash`, `gnupg`, `sqlite` and `tmux` are declared but absent from
-  `brew leaves`. They are installed — other packages depend on them. This is
-  why `bin/doctor` compares mise against `brew leaves` and not `brew list`.
-- Homebrew's `python@3.14` is installed but not declared. Seven declared
-  packages depend on it, so it cannot be un-chosen. It is linked and owns
-  `/opt/homebrew/bin/python3`, which makes it look like an overlap with mise's
-  python — it is not one, nothing declares it twice.
+  `brew leaves` — other packages depend on them. This is why `bin/doctor`
+  compares mise against `brew leaves` and not `brew list`.
+- `python@3.14` is installed, not declared, and not an overlap with mise's
+  python. Seven declared packages depend on it, so it cannot be un-chosen.
+- `brew bundle cleanup` exits 0 whether or not it finds anything, so read its
+  output rather than its status — and read the *verbs*: it also lists cache
+  files, which have nothing to do with drift.
 - `brew bundle check` says nothing about tap trust. Only `brew bundle install`
   surfaces that.
-- `brew bundle cleanup` exits 0 whether or not it finds anything, so its
-  output has to be read rather than its status. Without `--force` it only
-  reports; `bin/doctor` never passes `--force`. Read the verbs: the output
-  also lists cache files, which have nothing to do with drift.
 - `bin/doctor` passes `--no-upgrade` to `brew bundle check`. Without it, a
   package one bottle behind reads as missing.
 
 ## Known gaps
 
-- `~/.config/mise/config.toml` is not managed by chezmoi, so global mise tools
-  are declared nowhere version-controlled. This is why linters have not been
-  moved out of the Brewfile wholesale — the destination is less tracked than
-  the source. Fixing it belongs in the dotfiles repository.
-- CI resolves every declared name, but cannot tell that a name is no longer
-  the current one. A renamed cask (`docker` became `docker-desktop`) keeps
-  resolving for as long as the alias lives.
-- VS Code extensions are declared nowhere. Settings Sync owns them; a second
-  declaration here would be the two-managers problem again. Signing into the
-  account is the one manual step on a fresh Mac.
+- **Nothing runs `bin/doctor` on a schedule.** It is a command you have to
+  remember, and drift accumulates on the days you do not. Automating it — a
+  cron, a chezmoi `run_onchange`, a monthly shell check — is the open question.
+- **A renamed package is invisible.** CI resolves every declared name, but
+  cannot tell that a name is no longer the current one: a renamed cask
+  (`docker` became `docker-desktop`) keeps resolving for as long as the alias
+  lives.
+- **`~/.config/mise/config.toml` is not managed by chezmoi**, so global mise
+  tools are declared nowhere version-controlled. This is why linters have not
+  been moved out of the Brewfile wholesale — the destination is less tracked
+  than the source. Fixing it belongs in the dotfiles repository.
+- **VS Code extensions are declared nowhere.** Settings Sync owns them; a
+  second declaration here would be the two-managers problem again. Signing into
+  the account is the one manual step on a fresh Mac.

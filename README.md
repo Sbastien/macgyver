@@ -89,7 +89,7 @@ that update themselves — declaring `google-chrome` is what puts it on a fresh
 Mac, and Homebrew leaves it alone from then on.
 
 The longer version, and the exceptions, are in
-[AGENTS.md](AGENTS.md#the-one-rule-that-matters).
+[AGENTS.md](AGENTS.md#the-one-rule).
 
 ## Doctor
 
