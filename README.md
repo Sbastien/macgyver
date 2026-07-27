@@ -48,7 +48,10 @@ Installs Homebrew if it is missing, then the packages, then offers the
 dotfiles. It leaves no repository behind, so no doctor and no tasks, and it
 runs whatever `main` says right now — there are no releases to pin to.
 
-Or skip the installer entirely, if Homebrew is already there:
+The script exists for one reason: Homebrew has no `chezmoi init`. `brew
+bundle --file` takes a local path only — point it at a URL and it answers
+`No Brewfile found` — so nothing native can bootstrap a Mac that has no brew
+yet. Once Homebrew is there, it can:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sbastien/Brewfile/main/Brewfile | brew bundle --file=-
@@ -59,20 +62,24 @@ curl -fsSL https://raw.githubusercontent.com/Sbastien/Brewfile/main/Brewfile | b
 ## What's in here
 
 `Brewfile` is the environment: 109 packages in one file, grouped into
-commented sections, one description each. Everything else is two scripts.
+commented sections, one description each. Around it, two scripts and the
+config to lint them.
 
 | | |
 |---|---|
 | `install.sh` | bootstraps a fresh Mac — Homebrew, then the packages |
 | `bin/doctor` | audits this Mac against the Brewfile — read-only |
+| `mise.toml` | pinned linters and the task definitions |
+| `.github/` | one CI job, and dependabot for the action pins |
 
 There is no profile system. There was one — four files and a generator — and
 it went away, because one machine installed all four.
 
 There is no website either. There was one, a thousand lines that fetched the
-Brewfile over HTTP and re-rendered it, and it is why the Brewfile used to carry
-`@icon:` annotations and why a validator existed to check them. GitHub Pages
-renders this README instead, from a three-line `_config.yml`.
+Brewfile over HTTP and re-rendered it, and it is why the Brewfile used to
+carry `@icon:` annotations and why a validator existed to check them. GitHub
+renders this README on the repository page already; a second copy of it on
+Pages only added a duplicated title.
 
 ## Homebrew or mise?
 
@@ -84,8 +91,18 @@ So there is one rule: **they never manage the same tool.** What decides it is
 a single question — *do I want to pin this version?*
 
 - **Yes**, and a project depends on it → mise
-- **No**, and the tool updates itself → neither; let it (Claude Code, browsers)
-- **No**, but I want it on every machine → Homebrew
+- **No**, I want it on every machine → Homebrew
+
+That second branch covers apps that update themselves, which is most of the
+casks here. Declaring `google-chrome` or `docker-desktop` is what puts them on
+a fresh Mac; Homebrew marks them `auto_updates true` and then leaves them
+alone on `brew upgrade`, so the declaration never fights the app's own
+updater. Leaving them out would only mean a new machine never gets them.
+
+Nothing is declared nowhere unless Homebrew has no formula or cask for it at
+all — Claude Code, the CLI, which Anthropic's own installer puts in
+`~/.local/bin`. (The `claude` cask in the Brewfile is the desktop app, a
+different thing.)
 
 Today only `shellcheck` and `shfmt` live in mise, because this repo pins them
 in its own `mise.toml`. Everything else stays with Homebrew, for two reasons:
@@ -146,7 +163,7 @@ a recommendation. The two scripts and the CI are the reusable parts.
    YOUR_USERNAME=your-github-username
 
    # Prose uses the capitalised form and URLs the lowercase one, and the name
-   # appears in five files including LICENSE — so match both cases everywhere
+   # appears in three files including LICENSE — so match both cases everywhere
    # rather than listing files by hand.
    grep -ril sbastien --exclude-dir=.git . | xargs sed -i '' \
      -e "s/Sbastien/$YOUR_USERNAME/g" \

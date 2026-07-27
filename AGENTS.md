@@ -27,11 +27,22 @@ before this was written down.
 Before adding a tool, answer: **do I want to pin this version?**
 
 - Yes, and it depends on the project → mise
-- No, I want the latest, and the tool updates itself → neither; let it
-  self-update (Claude Code, Docker Desktop, browsers)
-- No, but I want it on every machine → Homebrew
+- No, I want it on every machine → Homebrew
 
 "Can mise install it?" is not the question. mise can install almost anything.
+
+**A tool that updates itself still goes in Homebrew.** This used to read as a
+third branch — "it self-updates, so declare it nowhere" — and the Brewfile
+contradicted it on eight lines: chrome, firefox, vivaldi, docker-desktop,
+vscode, slack, notion and figma all self-update and are all declared. The
+Brewfile was right. Homebrew flags these `auto_updates true` and skips them on
+`brew upgrade` unless you pass `--greedy`, so declaring one costs nothing and
+is the only thing that puts it on a fresh Mac.
+
+Declare nowhere only when Homebrew has no formula or cask at all. There is one
+such tool: Claude Code, the CLI, installed by Anthropic's script into
+`~/.local/bin`. Not to be confused with `cask "claude"`, the desktop app,
+which is declared like everything else.
 
 ## Layout
 
@@ -39,7 +50,6 @@ Before adding a tool, answer: **do I want to pin this version?**
 Brewfile                 the whole environment, one file, commented sections
 bin/doctor               audits the machine against the Brewfile
 install.sh               the one-liner installer, for a machine with no clone
-_config.yml              three lines; GitHub Pages renders README.md
 mise.toml                pinned repo tooling + task definitions
 ```
 
@@ -170,5 +180,9 @@ bug in the rewrite was found.
   are declared nowhere version-controlled. This is why linters have not been
   moved out of the Brewfile wholesale — the destination is less tracked than
   the source. Fixing it belongs in the dotfiles repository.
-- Claude Code is installed by Anthropic's native installer and declared
-  nowhere. Deliberate: it self-updates, and pinning it would fight the updater.
+- Claude Code, the CLI, is installed by Anthropic's own script into
+  `~/.local/bin` and declared nowhere. Deliberate: Homebrew has no formula for
+  it, so there is nothing to declare. `cask "claude"` is the desktop app.
+- There is no GitHub Pages site. `brew bundle`'s output and this README are
+  both better read where they already are. A Pages site rendering this file
+  printed its title twice — once from the theme, once from the file.
