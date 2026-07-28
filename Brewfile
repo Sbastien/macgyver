@@ -45,7 +45,6 @@ brew "xh"                   # HTTPie replacement
 # System Utilities
 brew "fastfetch"            # System info display
 brew "nmap"                 # Network scanner
-brew "trash"                # Safe rm replacement
 brew "curl"                 # Newer than the system one
 brew "wget"                 # Recursive downloader
 brew "openssh"              # Newer than the system one
@@ -108,7 +107,6 @@ cask "bitwarden"            # Password manager
 cask "ghostty"              # Terminal emulator
 cask "visual-studio-code"   # Code editor
 cask "docker-desktop"       # Containers
-brew "lazydocker"           # Docker TUI
 cask "bruno"                # API client
 cask "zen"                  # Privacy browser
 cask "google-chrome"        # Cross-browser testing
@@ -126,9 +124,7 @@ cask "kap"                  # Screen recorder GIF/MP4
 cask "scroll-reverser"      # Reverse scroll per device
 
 # Media & Creative
-brew "imagemagick"          # Image manipulation
 brew "ffmpeg"               # Video/audio processing
-brew "yt-dlp"               # Video downloader
 
 # Fonts
 cask "font-fira-code-nerd-font"       # Fira Code + icons
@@ -143,9 +139,6 @@ cask "font-meslo-lg-nerd-font"        # Meslo + icons
 #
 # The ones that run permanently say so. `restart_service: :changed` starts
 # them on a fresh Mac, and lets `brew bundle check` notice one that died.
-brew "meilisearch"          # Search engine
-brew "mailpit"              # Captures outgoing mail in development
-
 brew "postgresql@16", restart_service: :changed  # PostgreSQL server
 brew "redis", restart_service: :changed          # In-memory data store
 brew "caddy", restart_service: :changed          # Reverse proxy for local worktrees
@@ -167,22 +160,3 @@ cask "chatgpt"              # ChatGPT desktop app
 # Personal Apps
 cask "spotify"              # Music
 cask "vivaldi"              # Browser
-
-# Document Toolchain (experimental)
-# "experimental" in a section title means: kept just in case, or tried once
-# and never removed. It sits in the title rather than in a heading of its own
-# so the rest of the file stays honest — anything carrying the marker is a
-# candidate for deletion at the next review rather than something to carry
-# forever.
-#
-# All five are standalone: `brew uses --installed` reports nothing depending
-# on any of them, so they were installed deliberately rather than pulled in.
-# Whether they are still needed is the open question.
-brew "pandoc"               # Document converter
-brew "weasyprint"           # HTML to PDF
-brew "ghostscript"          # PostScript / PDF interpreter
-brew "poppler"              # PDF utilities
-cask "basictex"             # Minimal TeX distribution
-
-# Misc (experimental)
-brew "figlet"               # ASCII art banners
