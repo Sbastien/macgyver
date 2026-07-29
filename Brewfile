@@ -14,6 +14,7 @@
 
 # Terminal & Shell
 brew "zsh"                  # Modern shell
+brew "fish"                 # Alternative shell, on trial against zsh
 brew "bash"                 # Latest bash version
 brew "tmux"                 # Terminal multiplexer
 brew "neovim"               # Modern vim
