@@ -49,9 +49,14 @@ check_missing() {
     # --verbose names the packages rather than only failing. --no-upgrade
     # keeps the heading honest: without it, a package one bottle behind is
     # reported as missing. `brew outdated` asks the version question.
-    if brew bundle check --file="$BREWFILE" --no-upgrade --verbose; then
+    #
+    # Held back until it fails: on success brew prints a line that says what
+    # the ✓ below says.
+    local missing
+    if missing=$(brew bundle check --file="$BREWFILE" --no-upgrade --verbose 2>&1); then
         ok "everything declared is installed"
     else
+        printf '%s\n' "$missing"
         warnings=$((warnings + 1))
     fi
 }
@@ -62,13 +67,21 @@ check_undeclared() {
     # `cleanup` without --force only reports, and one pass covers formulae,
     # casks and third-party taps together. It exits 0 whether or not it finds
     # anything, so the output is what has to be read.
-    # Match the verbs, not a bare `^Would `: the output also carries a cache
-    # section that any warm machine has.
+    #
+    # Keep the `Would uninstall`/`Would untap` blocks and drop everything else,
+    # rather than naming the sections to hide. Homebrew also prints its cache
+    # cleanup, a `Run brew bundle cleanup --force` line this repository forbids,
+    # and a `Warning: Skipping` per outdated package — the version question
+    # doctor does not ask.
     local drift
     drift=$(brew bundle cleanup --file="$BREWFILE" 2>&1)
 
     if printf '%s\n' "$drift" | grep -qE '^Would (uninstall|untap)'; then
-        printf '%s\n' "$drift" | grep -v -e "^Would \`brew cleanup\`" -e '^Would remove:'
+        printf '%s\n' "$drift" | awk '
+            /^Would (uninstall|untap)/ { keep = 1; print; next }
+            /^(Would|Run|Warning)/     { keep = 0; next }
+            keep && NF                 { print }
+        '
         warnings=$((warnings + 1))
     else
         ok "nothing installed outside the Brewfile"
