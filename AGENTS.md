@@ -55,6 +55,10 @@ a future editor gets.
   `args: { quarantine: false }` on its own line, with a reason.
 - **Nothing tests `install.sh`.** Change it and run it by hand, with a stub for
   `brew bundle` and `chezmoi` on `PATH`.
+- **Squash-merge is disabled on the repository.** GitHub composes the squash
+  subject from the pull request title, which would let the merge button rather
+  than the author decide whether a commit message is conventional. Rebase, or
+  merge and write the subject by hand.
 - **VS Code extensions are declared nowhere** — Settings Sync owns them.
 - **`~/.config/mise/config.toml` is not managed by chezmoi**, so global mise
   tools are version-controlled nowhere. It belongs in the dotfiles repository.
