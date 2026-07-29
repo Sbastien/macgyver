@@ -2,11 +2,11 @@
 #
 # Audit this machine against what the repository declares.
 #
-# Two of the three checks are `brew bundle` in a trench coat, and that is the
-# point. What is left is the one question Homebrew will never answer — whether
-# a tool is claimed by both Homebrew and mise.
+# Two of the three checks are `brew bundle`. The third is the one question
+# Homebrew will never answer: whether a tool is claimed by both Homebrew and
+# mise.
 #
-# Read-only. Nothing here installs, uninstalls or modifies anything.
+# Read-only: nothing here installs, uninstalls or modifies anything.
 #
 # Usage: bin/doctor   (from anywhere)
 
@@ -63,8 +63,7 @@ check_undeclared() {
     # casks and third-party taps together. It exits 0 whether or not it finds
     # anything, so the output is what has to be read.
     # Match the verbs, not a bare `^Would `: the output also carries a cache
-    # section that any warm machine has. Those lines are dropped from the
-    # report too.
+    # section that any warm machine has.
     local drift
     drift=$(brew bundle cleanup --file="$BREWFILE" 2>&1)
 
@@ -86,9 +85,6 @@ brew_equivalents() {
     esac
 }
 
-# The one rule this repository has, and the only check Homebrew cannot do for
-# it: two managers owning one tool means two copies on disk and one silently
-# shadowing the other on PATH.
 check_manager_overlap() {
     section "Homebrew / mise overlap"
 
@@ -101,9 +97,9 @@ check_manager_overlap() {
         return
     }
 
-    # Only leaves count. A formula pulled in as a dependency — python@3.14 is
-    # required by seven packages here — is keg-only and not a tool Homebrew
-    # offers the user, so it does not compete with mise's copy.
+    # Only leaves count. A formula pulled in as a dependency — python@3.14
+    # here — is keg-only and not a tool Homebrew offers the user, so it does
+    # not compete with mise's copy.
     #
     # Strip @version so postgresql@16 matches a mise "postgres" entry.
     local brew_names found=0 tool name

@@ -12,8 +12,7 @@ set -euo pipefail
 # codes. No spinner over them, no log to redirect into, no `-q`, no
 # NONINTERACTIVE=1. Every flag layered over someone else's tool is a guess
 # about how that tool behaves, and the guess rots: a new warning or caveat
-# upstream simply stops being shown. Before adding one, ask what it hides on
-# the day the tool changes.
+# upstream simply stops being shown.
 #
 # bash and not zsh, here and in bin/doctor: shellcheck has no zsh dialect —
 # `shellcheck -s zsh` answers `Unknown shell: zsh` — so writing these in zsh
@@ -38,8 +37,7 @@ die() {
 
 # Put brew on PATH when it is installed but this shell does not know it yet —
 # which is the state right after Homebrew's installer finishes. Apple Silicon
-# uses /opt/homebrew and Intel /usr/local; asking both is shorter and more
-# honest than branching on `uname -m`.
+# uses /opt/homebrew, Intel /usr/local.
 activate_brew() {
     local candidate
     for candidate in /opt/homebrew/bin/brew /usr/local/bin/brew; do
@@ -51,10 +49,8 @@ activate_brew() {
 }
 
 command -v brew &>/dev/null || activate_brew || {
-    # Homebrew's own installer, unmodified. It lists the directories it will
-    # create, asks for confirmation and requests sudo itself, with its own
-    # explanation. NONINTERACTIVE=1 would suppress all of that, including any
-    # warning a future version adds.
+    # Homebrew's own installer, unmodified: it lists the directories it will
+    # create, asks for confirmation and requests sudo itself.
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" ||
         die "Homebrew installation failed."
 
@@ -70,15 +66,13 @@ trap 'rm -f "$brewfile"' EXIT
 curl -fsSL "$BREWFILE_URL" -o "$brewfile" || die "Failed to download $BREWFILE_URL"
 [[ -s "$brewfile" ]] || die "The downloaded Brewfile is empty."
 
-# `install` is the default subcommand, but brew bundle has a fistful of them
-# and naming the one you mean costs nothing. It upgrades what is already there.
+# Upgrades what is already installed, as well as adding what is missing.
 brew bundle install --file="$brewfile" || die "Some packages failed to install."
 
 printf '\n  🍺 Your dev environment is ready.\n\n'
 
 # Reads from /dev/tty rather than stdin: under `curl ... | bash`, stdin is the
-# script itself. No terminal means no question — the packages are installed,
-# which is the part that matters.
+# script itself. No terminal means no question.
 #
 # Opening the device is the test. `[[ -r /dev/tty ]]` only reads permission
 # bits, which are satisfied even with no controlling terminal, and the

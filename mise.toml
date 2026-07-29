@@ -1,4 +1,4 @@
-# mise plays two separate roles in this repository. They are easy to confuse.
+# mise plays two separate roles in this repository.
 #
 #   [tools]   mise installs these itself. Only the tooling this repo needs to
 #             lint and check itself. Pinned so a local run and a CI run check
@@ -18,8 +18,6 @@ shfmt = "3.13.1"
 
 [tasks.install]
 description = "Install everything in the Brewfile"
-# `install` is the default subcommand, but brew bundle has a fistful of them
-# and naming the one you mean costs nothing.
 run = "brew bundle install --file=Brewfile"
 
 # -----------------------------------------------------------------------------

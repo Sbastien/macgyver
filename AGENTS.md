@@ -26,20 +26,20 @@ decides it: **do I want to pin this version?** Yes, and a project depends on it
 
 ## Comments
 
-Default to none. A comment earns its place only when it explains why — and
-that why isn't already in the code, the specs, or git history.
+Every declaration in the Brewfile carries a description — that is the file.
+Prose comments are for why, and only when that why isn't already in the code
+or in another file's header.
 
-- **No "what"** — Restating a line, narrating steps ("first we…"), or logging
-  history ("used to return nil"). If behavior needs documenting, write a spec;
-  git covers what changed.
-- **No empty "whys"** — Justifying with an always-true goal (consistency,
-  readability, correctness) says nothing.
-- **No session leaks** — "as discussed", rejected alternatives, anything
-  written for a reader who was in the room.
-- **Keep the real why** — A non-obvious choice's reason: external quirk (link
-  the issue), timing/ordering constraint, magic number, actionable TODO/FIXME.
+- **No "what"** — restating a line, narrating steps.
+- **No empty "whys"** — consistency, readability, "costs nothing" say nothing.
+- **No second home** — if the Brewfile header or this file already carries the
+  rule, do not restate it.
+- **No counts in prose** — they only wait to go stale.
+- **Keep the real why** — an external quirk, an ordering constraint, or an
+  alternative that does not work.
 
-When unsure, delete — a missing comment is cheaper than a misleading one.
+When unsure, keep it: nothing here is tested, so a comment is the only warning
+a future editor gets.
 
 ## Traps
 
