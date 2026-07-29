@@ -59,6 +59,7 @@ brew "gh"                   # GitHub CLI
 brew "git-lfs"              # Large file storage
 brew "gitleaks"             # Git secrets scanner
 brew "git-filter-repo"      # History rewriting
+brew "committed"            # Commit message linter
 
 # Security & Privacy
 brew "gnupg"                # GPG encryption
