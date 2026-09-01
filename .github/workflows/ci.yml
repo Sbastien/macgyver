@@ -29,7 +29,7 @@ jobs:
       # Installs the shellcheck and shfmt versions pinned in mise.toml, so CI
       # and a local `mise run lint` cannot disagree about what is correct.
       - name: Setup mise
-        uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14  # v4.2.3
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c  # v4.3.0
 
       # One task, defined in mise.toml, so "this is what CI runs" is a fact
       # rather than two command lines kept in step by hand.
